@@ -55,6 +55,8 @@ func _load_sfx(file_name: String) -> void:
 			sfx_streams[file_name] = stream
 
 func play_bgm_file(file_name: String) -> void:
+	if not is_inside_tree():
+		return
 	if not music_enabled:
 		return
 	if current_bgm == file_name and music_player.playing:
@@ -65,6 +67,8 @@ func play_bgm_file(file_name: String) -> void:
 		current_bgm = file_name
 
 func play_sfx_file(file_name: String) -> void:
+	if not is_inside_tree():
+		return
 	if not sfx_enabled:
 		return
 	if sfx_streams.has(file_name):

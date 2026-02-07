@@ -55,10 +55,14 @@ var dash_speed: float = 1800.0
 # Hitbox (东方风格判定点)
 var hitbox_size: float = 4.0
 
+# Slowdown zones (Python slowdown_effects parity, but robust with per-zone targets)
+var _slow_zone_targets: Dictionary = {} # instance_id -> normal_speed_px_per_sec
+
 # References
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var shoot_timer: Timer = $ShootTimer
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
+@onready var pickup_area: Area2D = $PickupArea
 
 var hitbox_visual: Sprite2D = null  # 判定点可视化（运行时创建）
 
@@ -74,8 +78,19 @@ func _ready():
 	# Get screen size
 	screen_size = get_viewport_rect().size
 
+	# Touhou-like movement tuning:
+	# - Focused (Shift) speed uses the current "speed"
+	# - Unfocused speed is 2x
+	var base_speed := speed
+	focused_speed = base_speed
+	speed = base_speed * 2.0
+
 	# Connect signals
 	area_entered.connect(_on_area_entered)
+	area_exited.connect(_on_area_exited)
+
+	if pickup_area:
+		pickup_area.add_to_group("player_pickup")
 
 	# Notify game manager
 	if GameManager.has_method("report_health"):
@@ -126,6 +141,8 @@ func _create_hitbox_texture(radius: int) -> Texture2D:
 func _physics_process(delta):
 	if not is_alive:
 		return
+	if GameManager.time_stop_active and GameManager.time_stop_freeze_player:
+		return
 
 	is_focused = Input.is_action_pressed("focus")
 	handle_focus_mode()
@@ -135,10 +152,16 @@ func _physics_process(delta):
 	handle_bomb(delta)
 
 	# Clamp position to screen bounds
-	position.x = clamp(position.x, 20, screen_size.x - 20)
-	position.y = clamp(position.y, 20, screen_size.y - 20)
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	position.x = clamp(position.x, 20, viewport_size.x - 20)
+	position.y = clamp(position.y, 20, playfield_bottom - 20)
 
 func _input(event):
+	if GameManager.time_stop_active and GameManager.time_stop_freeze_player:
+		return
 	# X键 - 使用炸弹
 	if event.is_action_pressed("use_bomb"):
 		use_bomb()
@@ -214,8 +237,35 @@ func handle_movement(delta):
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_dir.length() > 0:
 		var current_speed = focused_speed if is_focused else speed
+		if not is_focused and not _slow_zone_targets.is_empty():
+			current_speed = minf(current_speed, _get_slowed_normal_speed())
 		position += input_dir * current_speed * delta
 		# print("Moving: ", input_dir, " Speed: ", current_speed)
+
+func _get_slowed_normal_speed() -> float:
+	var target := speed
+	for v in _slow_zone_targets.values():
+		target = minf(target, float(v))
+	return target
+
+func _enter_slow_zone(zone: Area2D) -> void:
+	if not zone:
+		return
+	var value = zone.get_meta("normal_speed_px_per_sec", null)
+	if value == null:
+		return
+	_slow_zone_targets[zone.get_instance_id()] = float(value)
+
+func _exit_slow_zone(zone: Area2D) -> void:
+	if not zone:
+		return
+	_slow_zone_targets.erase(zone.get_instance_id())
+
+func _teleport_from_prevent() -> void:
+	# Python parity (Event.bossUseSkill): teleport when touching Boss2 prevent barriers.
+	# Python uses top-left coords; our player position is centered (40x40 sprite).
+	var half := 20.0
+	global_position = Vector2(randf_range(0.0, 300.0) + half, randf_range(0.0, 440.0) + half)
 
 func handle_shooting():
 	# Match Python version: auto-shoot (no key required)
@@ -485,10 +535,11 @@ func start_dash(direction: Vector2):
 		position += direction.normalized() * dash_speed * dash_duration
 
 		# 冲刺期间无敌
-		set_collision_mask_value(4, false)
+		# Enemy & enemy bullets use collision layer value=4 (mask layer index=3).
+		set_collision_mask_value(3, false)
 		await get_tree().create_timer(dash_duration).timeout
 		if is_instance_valid(self):
-			set_collision_mask_value(4, true)
+			set_collision_mask_value(3, true)
 
 func handle_bomb(_delta):
 	if bomb_active:
@@ -516,19 +567,23 @@ func use_bomb():
 				enemy.take_damage(50)
 
 		# 炸弹期间无敌
-		set_collision_mask_value(4, false)
+		set_collision_mask_value(3, false)
 		await get_tree().create_timer(bomb_duration).timeout
 		if is_instance_valid(self):
-			set_collision_mask_value(4, true)
+			set_collision_mask_value(3, true)
 			bomb_active = false
 
 func take_damage(amount: int):
+	if GameManager.time_stop_active:
+		return
 	if not is_alive or bomb_active or is_dashing or is_invincible:
 		return  # 炸弹/冲刺/受击间隔期间无敌
 
 	# 先扣护盾
 	if shield > 0:
 		shield -= 1
+		if GameManager and GameManager.has_method("notify_player_hit"):
+			GameManager.notify_player_hit()
 		# 护盾被击破也需要无敌帧
 		activate_invincibility()
 		return
@@ -538,6 +593,9 @@ func take_damage(amount: int):
 		GameManager.report_health(current_health, max_health)
 	else:
 		GameManager.health_changed.emit(current_health, max_health)
+
+	if GameManager and GameManager.has_method("notify_player_hit"):
+		GameManager.notify_player_hit()
 
 	# 受击后激活无敌帧
 	activate_invincibility()
@@ -605,11 +663,30 @@ func _on_shoot_timer_timeout():
 	can_shoot = true
 
 func _on_area_entered(area):
+	if area and area.is_in_group("slow_zone"):
+		_enter_slow_zone(area)
+		# Some hazards (e.g. Boss4 static screens) should both slow and deal damage,
+		# so we don't early-return here.
+
+	if area and area.is_in_group("prevent"):
+		_teleport_from_prevent()
+		return
+
 	if area.is_in_group("enemies") or area.is_in_group("enemy_bullets"):
+		if GameManager.time_stop_active:
+			return
+		# Match Python: blown-away bullets never hurt the player.
+		if area is EnemyBullet and area.is_blown_away:
+			return
+
 		var damage_amount = 10
 		if area.has_method("get_damage"):
 			damage_amount = area.get_damage()
 		take_damage(damage_amount)
+
+func _on_area_exited(area) -> void:
+	if area and area.is_in_group("slow_zone"):
+		_exit_slow_zone(area)
 
 func use_crazy_shoot():
 	if is_crazy_shooting:

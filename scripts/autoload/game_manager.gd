@@ -10,6 +10,11 @@ signal achievement_unlocked(name: String)
 signal game_over
 signal game_paused
 signal game_resumed
+signal player_hit
+signal bomb_used
+signal spellcard_declared(spell_name: String, bonus: int, is_final: bool)
+signal spellcard_bonus_failed(spell_name: String)
+signal spellcard_result(spell_name: String, captured: bool, timed_out: bool, bonus_awarded: int)
 
 var score: int = 0
 var high_score: int = 0
@@ -17,7 +22,14 @@ var money: int = 0
 var power: int = 0  # 0-100
 var is_paused: bool = false
 var time_stop_active: bool = false
+var time_stop_freeze_player: bool = false
+var time_stop_freeze_boss: bool = true
+var _time_stop_end_sec: float = 0.0
 var boss_death_times: int = 1  # Python: bossdeathtimes (starts at 1, increments per boss defeat)
+
+# Playfield bounds (exclude BottomBar HUD area)
+const DEFAULT_BOTTOM_UI_HEIGHT: float = 120.0
+var _playfield_bottom_override_y: float = 0.0
 
 # Score multiplier system
 var score_multiplier: float = 1.0
@@ -106,7 +118,11 @@ func register_boss_kill(base_score: int = 10000) -> void:
 
 func register_bomb_used() -> void:
 	stats["total_bombs_used"] += 1
+	bomb_used.emit()
 	check_stat_achievements()
+
+func notify_player_hit() -> void:
+	player_hit.emit()
 
 func register_supply_collected() -> void:
 	stats["total_supplies_collected"] += 1
@@ -193,12 +209,50 @@ func add_power(amount: int):
 	power = clampi(power + amount, 0, 100)
 	power_changed.emit(power)
 
-func start_time_stop(duration: float = 2.0):
+func start_time_stop(duration: float = 2.0, freeze_player: bool = false, freeze_boss: bool = true):
+	# Allows overlapping time stops by extending the end timestamp.
+	var now := Time.get_ticks_msec() / 1000.0
+	_time_stop_end_sec = maxf(_time_stop_end_sec, now + duration)
+
 	if time_stop_active:
+		time_stop_freeze_player = time_stop_freeze_player or freeze_player
+		time_stop_freeze_boss = time_stop_freeze_boss or freeze_boss
 		return
+
+	time_stop_freeze_player = freeze_player
+	time_stop_freeze_boss = freeze_boss
 	time_stop_active = true
-	await get_tree().create_timer(duration).timeout
+	while (Time.get_ticks_msec() / 1000.0) < _time_stop_end_sec:
+		await get_tree().create_timer(0.05).timeout
 	time_stop_active = false
+	time_stop_freeze_player = false
+	time_stop_freeze_boss = true
+
+func set_playfield_bottom_override_y(y: float) -> void:
+	# HUD may report BottomBar's top Y so gameplay never enters it.
+	_playfield_bottom_override_y = maxf(0.0, y)
+
+func get_viewport_size() -> Vector2:
+	var tree := get_tree()
+	if tree and tree.root:
+		return tree.root.get_visible_rect().size
+	return Vector2(1280, 960)
+
+func get_playfield_bottom_y(viewport_size: Vector2 = Vector2.ZERO) -> float:
+	var size := viewport_size
+	if size == Vector2.ZERO:
+		size = get_viewport_size()
+
+	var bottom_y := size.y - DEFAULT_BOTTOM_UI_HEIGHT
+	if _playfield_bottom_override_y > 0.0:
+		bottom_y = minf(_playfield_bottom_override_y, size.y)
+	return maxf(0.0, bottom_y)
+
+func get_playfield_rect(viewport_size: Vector2 = Vector2.ZERO) -> Rect2:
+	var size := viewport_size
+	if size == Vector2.ZERO:
+		size = get_viewport_size()
+	return Rect2(Vector2.ZERO, Vector2(size.x, get_playfield_bottom_y(size)))
 
 func activate_score_multiplier(multiplier: float, duration: float):
 	score_multiplier = multiplier

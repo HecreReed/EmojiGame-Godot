@@ -1,120 +1,208 @@
-[gd_scene load_steps=5 format=3 uid="uid://main_game_scene"]
+[gd_scene format=3 uid="uid://5ellx3qppkab"]
 
-[ext_resource type="Script" path="res://scripts/world/scrolling_background.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://player_scene" path="res://scenes/player/player.tscn" id="2"]
-[ext_resource type="Script" path="res://scripts/autoload/enemy_spawner.gd" id="3"]
-[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="4"]
+[ext_resource type="Script" uid="uid://bo0xqpyddtblx" path="res://scripts/world/scrolling_background.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
+[ext_resource type="Script" uid="uid://cymp85jutpm7r" path="res://scripts/autoload/enemy_spawner.gd" id="3"]
+[ext_resource type="Script" uid="uid://cbgh3ymqse50v" path="res://scripts/ui/hud.gd" id="4"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=381667998]
 
-[node name="ScrollingBackground" type="Node2D" parent="."]
+[node name="ScrollingBackground" type="Node2D" parent="." unique_id=731121922]
 script = ExtResource("1")
-scroll_speed = 50.0
 
-[node name="ColorRect1" type="ColorRect" parent="ScrollingBackground"]
+[node name="ColorRect1" type="ColorRect" parent="ScrollingBackground" unique_id=937029103]
 offset_right = 1280.0
 offset_bottom = 960.0
 color = Color(0.1, 0.1, 0.2, 1)
 
-[node name="ColorRect2" type="ColorRect" parent="ScrollingBackground"]
+[node name="ColorRect2" type="ColorRect" parent="ScrollingBackground" unique_id=802349958]
 offset_left = 1280.0
 offset_right = 2560.0
 offset_bottom = 960.0
 color = Color(0.1, 0.1, 0.2, 1)
 
-[node name="Player" parent="." instance=ExtResource("2")]
+[node name="Player" parent="." unique_id=1682790295 instance=ExtResource("2")]
 position = Vector2(100, 240)
 
-[node name="EnemySpawner" type="Node" parent="."]
+[node name="EnemySpawner" type="Node" parent="." unique_id=497605235]
 script = ExtResource("3")
 
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=134622537]
 script = ExtResource("4")
 
-[node name="MarginContainer" type="MarginContainer" parent="HUD"]
+[node name="BossBar" type="MarginContainer" parent="HUD" unique_id=1835721313]
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 120.0
+grow_horizontal = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/BossBar" unique_id=1504483695]
+layout_mode = 2
+
+[node name="BossNameLabel" type="Label" parent="HUD/BossBar/VBoxContainer" unique_id=1161416383]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+text = "Boss"
+
+[node name="BossPhaseRow" type="HBoxContainer" parent="HUD/BossBar/VBoxContainer" unique_id=1612774860]
+layout_mode = 2
+
+[node name="BossPhaseLabel" type="Label" parent="HUD/BossBar/VBoxContainer/BossPhaseRow" unique_id=260343703]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="BossTimerLabel" type="Label" parent="HUD/BossBar/VBoxContainer/BossPhaseRow" unique_id=986188933]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "TIME: 0"
+horizontal_alignment = 2
+
+[node name="SpellBonusRow" type="HBoxContainer" parent="HUD/BossBar/VBoxContainer"]
+visible = false
+layout_mode = 2
+
+[node name="SpellBonusTitleLabel" type="Label" parent="HUD/BossBar/VBoxContainer/SpellBonusRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+text = "BONUS"
+
+[node name="SpellBonusValueLabel" type="Label" parent="HUD/BossBar/VBoxContainer/SpellBonusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+text = "0"
+horizontal_alignment = 2
+
+[node name="BossHealthBar" type="ProgressBar" parent="HUD/BossBar/VBoxContainer" unique_id=1601851052]
+custom_minimum_size = Vector2(600, 20)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="BossHealthLabel" type="Label" parent="HUD/BossBar/VBoxContainer/BossHealthBar" unique_id=335116406]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -70.0
+offset_top = -11.5
+offset_right = 70.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "0/0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BossOrbs" type="HBoxContainer" parent="HUD/BossBar/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 2
+
+[node name="BottomBar" type="Control" parent="HUD" unique_id=1516250210]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -120.0
+grow_horizontal = 2
+
+[node name="Background" type="ColorRect" parent="HUD/BottomBar" unique_id=2035016465]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="MarginContainer" type="MarginContainer" parent="HUD/BottomBar" unique_id=403304334]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 20.0
-offset_top = 20.0
+offset_top = 10.0
 offset_right = -20.0
-offset_bottom = -20.0
+offset_bottom = -10.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="HUD/BottomBar/MarginContainer" unique_id=999304601]
 layout_mode = 2
-size_flags_vertical = 0
+size_flags_horizontal = 3
+size_flags_vertical = 3
 
-[node name="ScoreLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+[node name="Stats" type="VBoxContainer" parent="HUD/BottomBar/MarginContainer/HBoxContainer" unique_id=1007268489]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ScoreLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Stats" unique_id=260463829]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "Score: 0"
 
-[node name="MoneyLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+[node name="MoneyLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Stats" unique_id=1457900953]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 text = "Money: 0"
 
-[node name="GameTimeLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "Gametime: 0"
-
-[node name="BombLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "Bombs: 3"
-
-[node name="ShieldLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "Shield: 0"
-
-[node name="WeaponLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
-text = "Weapon: NORMAL"
-
-[node name="WaveLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 0.5, 1)
-theme_override_font_sizes/font_size = 20
-text = "Wave: 1"
-
-[node name="BossInLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 0.5, 1)
-theme_override_font_sizes/font_size = 20
-text = "Boss in: 60s"
-
-[node name="ComboLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer"]
+[node name="ComboLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Stats" unique_id=217551599]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 text = "Combo: 0"
 
-[node name="HealthBar" type="ProgressBar" parent="HUD/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(250, 30)
+[node name="Stage" type="VBoxContainer" parent="HUD/BottomBar/MarginContainer/HBoxContainer" unique_id=1640392627]
 layout_mode = 2
-max_value = 100.0
+size_flags_horizontal = 3
+
+[node name="GameTimeLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Stage" unique_id=424830656]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Gametime: 0"
+
+[node name="WaveLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Stage" unique_id=906742930]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.5, 1)
+theme_override_font_sizes/font_size = 18
+text = "Wave: 1"
+
+[node name="BossInLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Stage" unique_id=337673019]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.5, 1)
+theme_override_font_sizes/font_size = 18
+text = "Boss in: 60s"
+
+[node name="Player" type="VBoxContainer" parent="HUD/BottomBar/MarginContainer/HBoxContainer" unique_id=1684578941]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HealthBar" type="ProgressBar" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Player" unique_id=995329483]
+custom_minimum_size = Vector2(300, 22)
+layout_mode = 2
 value = 100.0
 show_percentage = false
 
-[node name="PowerBar" type="ProgressBar" parent="HUD/MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(250, 20)
-layout_mode = 2
-max_value = 100.0
-value = 0.0
-show_percentage = false
-
-[node name="HealthLabel" type="Label" parent="HUD/MarginContainer/VBoxContainer/HealthBar"]
+[node name="HealthLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Player/HealthBar" unique_id=1519840182]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -122,18 +210,45 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -20.0
-offset_top = -11.5
+offset_top = -11.0
 offset_right = 20.0
-offset_bottom = 11.5
+offset_bottom = 11.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 14
 text = "100/100"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PauseMenu" type="Control" parent="HUD"]
+[node name="PowerBar" type="ProgressBar" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Player" unique_id=1732253525]
+custom_minimum_size = Vector2(300, 18)
+layout_mode = 2
+show_percentage = false
+
+[node name="Loadout" type="VBoxContainer" parent="HUD/BottomBar/MarginContainer/HBoxContainer" unique_id=77507718]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="WeaponLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Loadout" unique_id=700975284]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Weapon: NORMAL"
+
+[node name="BombLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Loadout" unique_id=2055437721]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Bombs: 3"
+
+[node name="ShieldLabel" type="Label" parent="HUD/BottomBar/MarginContainer/HBoxContainer/Loadout" unique_id=82399599]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Shield: 0"
+
+[node name="PauseMenu" type="Control" parent="HUD" unique_id=1776097434]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -142,7 +257,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ColorRect" type="ColorRect" parent="HUD/PauseMenu"]
+[node name="ColorRect" type="ColorRect" parent="HUD/PauseMenu" unique_id=1110190516]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -151,7 +266,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.7)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/PauseMenu"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/PauseMenu" unique_id=1484293945]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -165,21 +280,21 @@ offset_bottom = 75.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PauseTitle" type="Label" parent="HUD/PauseMenu/VBoxContainer"]
+[node name="PauseTitle" type="Label" parent="HUD/PauseMenu/VBoxContainer" unique_id=645488101]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "PAUSED"
 horizontal_alignment = 1
 
-[node name="ResumeButton" type="Button" parent="HUD/PauseMenu/VBoxContainer"]
+[node name="ResumeButton" type="Button" parent="HUD/PauseMenu/VBoxContainer" unique_id=1396629473]
 layout_mode = 2
 text = "Resume (ESC)"
 
-[node name="QuitButton" type="Button" parent="HUD/PauseMenu/VBoxContainer"]
+[node name="QuitButton" type="Button" parent="HUD/PauseMenu/VBoxContainer" unique_id=1457025011]
 layout_mode = 2
 text = "Quit to Menu"
 
-[node name="GameOverScreen" type="Control" parent="HUD"]
+[node name="GameOverScreen" type="Control" parent="HUD" unique_id=1734488560]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -188,7 +303,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="ColorRect" type="ColorRect" parent="HUD/GameOverScreen"]
+[node name="ColorRect" type="ColorRect" parent="HUD/GameOverScreen" unique_id=1615407061]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -197,7 +312,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.2, 0, 0, 0.8)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/GameOverScreen"]
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/GameOverScreen" unique_id=1377186386]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -211,31 +326,30 @@ offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="GameOverTitle" type="Label" parent="HUD/GameOverScreen/VBoxContainer"]
+[node name="GameOverTitle" type="Label" parent="HUD/GameOverScreen/VBoxContainer" unique_id=1056236934]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
 theme_override_font_sizes/font_size = 48
 text = "GAME OVER"
 horizontal_alignment = 1
 
-[node name="FinalScoreLabel" type="Label" parent="HUD/GameOverScreen/VBoxContainer"]
+[node name="FinalScoreLabel" type="Label" parent="HUD/GameOverScreen/VBoxContainer" unique_id=1636685388]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Final Score: 0"
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="HUD/GameOverScreen/VBoxContainer"]
+[node name="RestartButton" type="Button" parent="HUD/GameOverScreen/VBoxContainer" unique_id=1522839805]
 layout_mode = 2
 text = "Restart"
 
-[node name="QuitButton" type="Button" parent="HUD/GameOverScreen/VBoxContainer"]
+[node name="QuitButton" type="Button" parent="HUD/GameOverScreen/VBoxContainer" unique_id=1375827556]
 layout_mode = 2
 text = "Quit to Menu"
 
-[node name="AchievementLabel" type="Label" parent="HUD"]
+[node name="AchievementLabel" type="Label" parent="HUD" unique_id=2028763731]
 visible = false
-layout_mode = 1
-anchors_preset = 8
+anchors_preset = -1
 anchor_left = 0.5
 anchor_top = 0.12
 anchor_right = 0.5
@@ -249,4 +363,54 @@ grow_vertical = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.2, 1)
 theme_override_font_sizes/font_size = 28
 text = "Achievement Unlocked"
+horizontal_alignment = 1
+
+[node name="SpellCardOverlay" type="Control" parent="HUD"]
+visible = false
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.16
+anchor_right = 0.5
+anchor_bottom = 0.16
+offset_left = -360.0
+offset_top = -60.0
+offset_right = 360.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/SpellCardOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -55.0
+offset_right = 320.0
+offset_bottom = 55.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="SpellCardTitleLabel" type="Label" parent="HUD/SpellCardOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "SPELL CARD"
+horizontal_alignment = 1
+
+[node name="SpellCardNameLabel" type="Label" parent="HUD/SpellCardOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "「...」"
+horizontal_alignment = 1
+
+[node name="SpellCardResultLabel" type="Label" parent="HUD/SpellCardOverlay/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = ""
 horizontal_alignment = 1

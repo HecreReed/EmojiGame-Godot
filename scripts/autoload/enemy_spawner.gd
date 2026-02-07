@@ -3,7 +3,12 @@ extends Node
 @export var enemy_scene: PackedScene
 @export var boss_scene: PackedScene
 
+@export var midboss_enabled: bool = true
+@export var midboss_spawn_ratio: float = 0.55 # 0..1 of stage_duration
+
 var is_boss_active: bool = false
+var is_midboss_active: bool = false
+var _midboss_spawned_this_stage: bool = false
 
 # Python-like spawn control (EmojiGame-master/emojigame/main.py)
 var game_start_time: float = 0.0
@@ -26,6 +31,11 @@ func _ready() -> void:
 	randomkis = 55.0 + 10.0 * randf()
 	max_enemies = 2
 	current_wave = 1
+	is_midboss_active = false
+	_midboss_spawned_this_stage = false
+
+	if StageManager and StageManager.has_signal("phase_changed"):
+		StageManager.phase_changed.connect(_on_stage_phase_changed)
 
 
 func _process(_delta: float) -> void:
@@ -46,6 +56,14 @@ func _process(_delta: float) -> void:
 func _process_stage() -> void:
 	if is_boss_active:
 		return
+	if is_midboss_active:
+		return
+
+	if midboss_enabled and not _midboss_spawned_this_stage:
+		var ratio := clampf(midboss_spawn_ratio, 0.05, 0.95)
+		if StageManager.stage_elapsed >= StageManager.stage_duration * ratio:
+			_spawn_midboss()
+			return
 
 	var now := Time.get_ticks_msec() / 1000.0
 	var elapsed := now - game_start_time
@@ -75,6 +93,71 @@ func _process_boss() -> void:
 	if not is_boss_active:
 		spawn_boss()
 
+func _on_stage_phase_changed(new_phase: int) -> void:
+	if new_phase != StageManager.StagePhase.STAGE:
+		return
+	_reset_stage_state()
+
+func _reset_stage_state() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	game_start_time = now
+	last_spawn_time = now
+	randomkis = 55.0 + 10.0 * randf()
+	max_enemies = 2
+	current_wave = 1
+	is_midboss_active = false
+	_midboss_spawned_this_stage = false
+	if StageManager and StageManager.has_method("set_midboss_active"):
+		StageManager.set_midboss_active(false)
+
+func _spawn_midboss() -> void:
+	if not enemy_scene:
+		return
+	if not get_parent():
+		return
+
+	_midboss_spawned_this_stage = true
+	is_midboss_active = true
+	if StageManager and StageManager.has_method("set_midboss_active"):
+		StageManager.set_midboss_active(true)
+
+	# Clear stage enemies/bullets for a clean midboss segment (Touhou-like).
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e and is_instance_valid(e) and e.is_inside_tree():
+			e.queue_free()
+	for b in get_tree().get_nodes_in_group("enemy_bullets"):
+		if b and is_instance_valid(b):
+			b.queue_free()
+
+	var midboss := enemy_scene.instantiate() as Enemy
+	if not midboss:
+		is_midboss_active = false
+		if StageManager and StageManager.has_method("set_midboss_active"):
+			StageManager.set_midboss_active(false)
+		return
+
+	midboss.enemy_kind = Enemy.EnemyKind.MINIBOSS
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	var half := 20.0
+	midboss.global_position = Vector2(
+		# Keep within Enemy._remove_if_outside_screen() right-side grace range.
+		viewport_size.x + randf_range(0.0, 100.0) + half,
+		randf_range(80.0, max(80.0, playfield_bottom - 120.0)) + half
+	)
+
+	midboss.tree_exited.connect(_on_midboss_defeated)
+	get_parent().add_child(midboss)
+
+func _on_midboss_defeated() -> void:
+	is_midboss_active = false
+	if StageManager and StageManager.has_method("set_midboss_active"):
+		StageManager.set_midboss_active(false)
+	last_spawn_time = Time.get_ticks_msec() / 1000.0
+
 
 func _spawn_primary_enemy() -> void:
 	if not enemy_scene:
@@ -85,6 +168,9 @@ func _spawn_primary_enemy() -> void:
 		return
 
 	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	var half := 20.0
 
 	# Match Python: 60% chance to use new enemy types when available.
@@ -108,7 +194,7 @@ func _spawn_primary_enemy() -> void:
 		enemy.enemy_kind = kind
 		enemy.global_position = Vector2(
 			viewport_size.x + randf_range(0.0, 100.0) + half,
-			randf_range(50.0, max(50.0, viewport_size.y - 100.0)) + half
+			randf_range(50.0, max(50.0, playfield_bottom - 100.0)) + half
 		)
 	else:
 		# Original enemy rint selection depends on bossdeathtimes.
@@ -119,7 +205,7 @@ func _spawn_primary_enemy() -> void:
 		enemy.enemy_kind = randi_range(1, max_base)
 		enemy.global_position = Vector2(
 			viewport_size.x + half,
-			randf_range(0.0, max(0.0, viewport_size.y - 80.0)) + half
+			randf_range(0.0, max(0.0, playfield_bottom - 80.0)) + half
 		)
 
 	get_parent().add_child(enemy)
@@ -130,6 +216,9 @@ func _spawn_wave_extras() -> void:
 		return
 
 	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	var half := 20.0
 
 	# Python wave system (main.py): every 10 waves -> 1 miniboss, every 5 waves -> 2 elite.
@@ -138,7 +227,7 @@ func _spawn_wave_extras() -> void:
 			Enemy.EnemyKind.MINIBOSS,
 			Vector2(
 				viewport_size.x + randf_range(50.0, 150.0) + half,
-				randf_range(100.0, max(100.0, viewport_size.y - 100.0)) + half
+				randf_range(100.0, max(100.0, playfield_bottom - 100.0)) + half
 			)
 		)
 	elif current_wave % 5 == 0:
@@ -147,7 +236,7 @@ func _spawn_wave_extras() -> void:
 				Enemy.EnemyKind.ELITE,
 				Vector2(
 					viewport_size.x + float(i) * 150.0 + half,
-					randf_range(100.0, max(100.0, viewport_size.y - 100.0)) + half
+					randf_range(100.0, max(100.0, playfield_bottom - 100.0)) + half
 				)
 			)
 
@@ -185,7 +274,10 @@ func spawn_boss() -> void:
 
 	# Python initial positions (BossEnemies.py)
 	var half := 40.0
-	var y := randf_range(0.0, max(0.0, viewport_size.y - 80.0))
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	var y := randf_range(0.0, max(0.0, playfield_bottom - 80.0))
 	var boss_id := int(boss.get("boss_id")) if "boss_id" in boss else StageManager.current_stage
 	if boss_id == 2:
 		boss.global_position = Vector2(randf_range(800.0, 1100.0) + half, -80.0 + half)

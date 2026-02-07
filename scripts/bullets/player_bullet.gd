@@ -59,7 +59,14 @@ func _physics_process(delta):
 
 	# Remove bullet if out of screen
 	var viewport_size := get_viewport_rect().size
-	if position.x > viewport_size.x + 100 or position.x < -100 or position.y > viewport_size.y + 100 or position.y < -100:
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	var bottom_limit := playfield_bottom - _get_vertical_extent()
+	if position.y > bottom_limit:
+		queue_free()
+		return
+	if position.x > viewport_size.x + 100 or position.x < -100 or position.y < -100:
 		queue_free()
 
 func _on_area_entered(area):
@@ -122,7 +129,7 @@ func _update_homing() -> void:
 func _update_spiral(delta: float) -> void:
 	spiral_radius = max(0.0, spiral_radius - spiral_radius_shrink_per_sec * delta)
 	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if player and spiral_radius > 0.0:
+	if player and is_instance_valid(player) and not player.is_queued_for_deletion() and spiral_radius > 0.0:
 		global_position = player.global_position + Vector2(cos(spiral_angle), sin(spiral_angle)) * spiral_radius
 		spiral_angle += spiral_angle_speed * delta
 		return
@@ -132,3 +139,13 @@ func _update_spiral(delta: float) -> void:
 		spiral_ended = true
 		direction = Vector2(cos(spiral_angle), sin(spiral_angle)).normalized()
 		speed = spiral_release_speed
+
+func _get_vertical_extent() -> float:
+	var cs := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if cs and cs.shape:
+		var shape := cs.shape
+		if shape is CircleShape2D:
+			return (shape as CircleShape2D).radius
+		if shape is RectangleShape2D:
+			return (shape as RectangleShape2D).size.y * 0.5
+	return 8.0

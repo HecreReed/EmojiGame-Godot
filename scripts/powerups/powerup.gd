@@ -55,6 +55,7 @@ func _physics_process(delta):
 
 	_move_supply(delta)
 	_calu()
+	_clamp_to_playfield()
 	_despawn_check()
 
 
@@ -95,7 +96,7 @@ func _move_supply(delta: float) -> void:
 
 func _calu() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if not player:
+	if not player or not is_instance_valid(player) or player.is_queued_for_deletion():
 		return
 
 	var player_pos := _get_player_python_pos()
@@ -126,6 +127,13 @@ func _despawn_check() -> void:
 	if randf() <= p:
 		queue_free()
 
+func _clamp_to_playfield() -> void:
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	global_position.y = clampf(global_position.y, HALF_SIZE, playfield_bottom - HALF_SIZE)
+
 
 func _python_pos() -> Vector2:
 	return global_position - Vector2(HALF_SIZE, HALF_SIZE)
@@ -133,19 +141,35 @@ func _python_pos() -> Vector2:
 
 func _get_player_python_pos() -> Vector2:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if not player:
+	if not player or not is_instance_valid(player) or player.is_queued_for_deletion():
 		return Vector2.ZERO
 	return player.global_position - Vector2(20.0, 20.0)
 
 func _on_area_entered(area):
-	if area.is_in_group("player"):
-		apply_effect(area)
+	var player := _resolve_player(area)
+	if player:
+		apply_effect(player)
 		queue_free()
 
 func _on_body_entered(body):
-	if body.is_in_group("player"):
-		apply_effect(body)
+	var player := _resolve_player(body)
+	if player:
+		apply_effect(player)
 		queue_free()
+
+func _resolve_player(target: Node) -> Node:
+	if not target:
+		return null
+
+	if target.is_in_group("player"):
+		return target
+
+	if target.is_in_group("player_pickup"):
+		var maybe_player := target.get_parent()
+		if maybe_player and maybe_player.is_in_group("player"):
+			return maybe_player
+
+	return null
 
 func apply_effect(player):
 	if GameManager.has_method("register_supply_collected"):
@@ -207,13 +231,13 @@ func apply_effect(player):
 			if "is_invincible" in player:
 				player.is_invincible = true
 			if player.has_method("set_collision_mask_value"):
-				player.set_collision_mask_value(4, false)
+				player.set_collision_mask_value(3, false)
 			await get_tree().create_timer(3.0).timeout
 			if is_instance_valid(player):
 				if "is_invincible" in player:
 					player.is_invincible = false
 				if player.has_method("set_collision_mask_value"):
-					player.set_collision_mask_value(4, true)
+					player.set_collision_mask_value(3, true)
 
 		PowerUpType.CLEAR_SCREEN:
 			# 全屏清除敌弹

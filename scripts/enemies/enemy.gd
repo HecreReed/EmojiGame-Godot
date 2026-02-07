@@ -43,6 +43,10 @@ var cotime_sec: float = 0.0
 var move_direction: String = "left"
 var can_change_move: bool = true
 
+# Special spawns (e.g. Boss4 UFO) can bypass the kind-based setup logic.
+var use_custom_setup: bool = false
+var auto_shoot_enabled: bool = true
+
 # Visual parity: new enemy types reuse a rolled base enemy sprite in Python (super().__init__).
 var visual_enemy_id: int = 1
 
@@ -64,6 +68,9 @@ var fast_dash_start_sec: float = 0.0
 var attack_pattern: int = 0
 var pattern_change_time_sec: float = 0.0
 
+# Midboss flag (used for HUD)
+var is_midboss: bool = false
+
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var shoot_timer: Timer = $ShootTimer
 
@@ -77,11 +84,23 @@ func _ready() -> void:
 
 	spawn_time_sec = Time.get_ticks_msec() / 1000.0
 	cotime_sec = spawn_time_sec
-	move_direction = "left"
 
-	_setup_by_kind()
-	_apply_visual()
-	_setup_shoot_timer()
+	if not use_custom_setup:
+		_setup_by_kind()
+		_apply_visual()
+	else:
+		max_health = maxi(max_health, health)
+
+	# Midboss should show up in the boss UI, but must not affect StageManager.
+	if is_midboss:
+		add_to_group("boss")
+
+	if auto_shoot_enabled:
+		_setup_shoot_timer()
+	else:
+		can_shoot = false
+		if shoot_timer:
+			shoot_timer.stop()
 
 
 func _physics_process(delta: float) -> void:
@@ -113,6 +132,7 @@ func _setup_by_kind() -> void:
 	fast_dash_start_sec = spawn_time_sec
 	attack_pattern = 0
 	pattern_change_time_sec = spawn_time_sec
+	is_midboss = false
 
 	match enemy_kind:
 		EnemyKind.BASE_1, EnemyKind.BASE_2, EnemyKind.BASE_3, EnemyKind.BASE_4, EnemyKind.BASE_5, EnemyKind.BASE_6, EnemyKind.BASE_7:
@@ -192,6 +212,7 @@ func _setup_by_kind() -> void:
 			health = 800 * mult
 			attack_pattern = 0
 			pattern_change_time_sec = spawn_time_sec
+			is_midboss = true
 
 		_:
 			visual_enemy_id = 1
@@ -270,6 +291,9 @@ func _move_by_kind(delta: float, now_sec: float) -> void:
 
 func _move_python_base(delta: float) -> void:
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 
 	match move_direction:
 		"left":
@@ -286,8 +310,8 @@ func _move_python_base(delta: float) -> void:
 				position.y -= speed * delta
 		"down":
 			if can_change_move:
-				if position.y <= viewport_size.y - HALF_SIZE:
-					position.y += speed * delta
+				if position.y < playfield_bottom - HALF_SIZE:
+					position.y = minf(position.y + speed * delta, playfield_bottom - HALF_SIZE)
 			else:
 				position.y += speed * delta
 		_:
@@ -316,7 +340,7 @@ func _move_fast(delta: float, now_sec: float) -> void:
 
 func _move_suicide(delta: float) -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if not player:
+	if not player or not is_instance_valid(player) or player.is_queued_for_deletion():
 		_move_python_base(delta)
 		return
 
@@ -525,12 +549,12 @@ func _spawn_python_bullet(
 	speed_value: float,
 	bullet_type: EnemyBullet.BulletType,
 	texture_path: String
-) -> void:
+) -> EnemyBullet:
 	if not bullet_scene or not get_parent():
-		return
+		return null
 	var bullet := bullet_scene.instantiate() as EnemyBullet
 	if not bullet:
-		return
+		return null
 
 	bullet.global_position = spawn_pos
 	bullet.damage = randi_range(8, 9)
@@ -546,6 +570,7 @@ func _spawn_python_bullet(
 			bullet_sprite.texture = tex
 
 	get_parent().add_child(bullet)
+	return bullet
 
 
 # Compatibility helpers for BossEnemy (legacy patterns).
@@ -709,14 +734,25 @@ func _spawn_split_children() -> void:
 
 
 func _on_area_entered(area: Area2D) -> void:
+	if GameManager.time_stop_active:
+		return
 	if area.is_in_group("player") and area.has_method("take_damage"):
 		area.take_damage(damage)
 
 
 func _remove_if_outside_screen() -> void:
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
 	var pos := _python_pos()
-	if pos.x > viewport_size.x + 100.0 or pos.x < -100.0 or pos.y > viewport_size.y + 100.0 or pos.y < -100.0:
+	if pos.x > viewport_size.x + 100.0 or pos.x < -100.0 or pos.y < -100.0:
+		queue_free()
+		return
+
+	# Treat the BottomBar UI area as out-of-bounds for gameplay entities.
+	if global_position.y > playfield_bottom - HALF_SIZE:
 		queue_free()
 
 
@@ -727,9 +763,10 @@ func _python_pos() -> Vector2:
 
 func _get_player_python_pos() -> Vector2:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
-	if not player:
+	if not player or not is_instance_valid(player) or player.is_queued_for_deletion():
 		return Vector2.ZERO
-	return player.global_position - Vector2(HALF_SIZE, HALF_SIZE)
+	# Aim/tracking should target the player's center (Touhou-style hitpoint), not the pygame top-left.
+	return player.global_position
 
 
 class TanSample:
