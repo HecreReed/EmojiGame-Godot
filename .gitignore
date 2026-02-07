@@ -4,3 +4,7 @@
 
 # Local archive (do not commit)
 EmojiGame-master.zip
+
+# Python bytecode caches
+__pycache__/
+*.pyc
