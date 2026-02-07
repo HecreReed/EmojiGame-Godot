@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://cokxn4lrnasbj"]
+
+[ext_resource type="Script" uid="uid://mots5m3geeyx" path="res://scripts/boss.gd" id="1_neq0i"]
+[ext_resource type="Texture2D" uid="uid://dxboq1mg4q8rk" path="res://images/boss1.png" id="2_jncid"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_qnbj4"]
+radius = 40.0
+
+[node name="boss" type="Area2D" unique_id=2020590363]
+script = ExtResource("1_neq0i")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=1921208794]
+scale = Vector2(1.5, 1.5)
+texture = ExtResource("2_jncid")
+
+[node name="CollisionShape" type="CollisionShape2D" parent="." unique_id=903722786]
+shape = SubResource("CircleShape2D_qnbj4")

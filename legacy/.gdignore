@@ -1,0 +1,3 @@
+# Ignore legacy backups so their global `class_name` scripts don't conflict with
+# the active project (Godot scans all .gd files for global classes).
+

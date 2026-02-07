@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://dhehcb5mt8fno"]
+
+[ext_resource type="Script" uid="uid://ddvytaejcy8v1" path="res://scripts/main.gd" id="1_o5qli"]
+
+[node name="main" type="Node2D" unique_id=1596756635]
+script = ExtResource("1_o5qli")
+
+[node name="Background" type="ColorRect" parent="." unique_id=355068385]
+offset_right = 480.0
+offset_bottom = 700.0
+color = Color(0.1, 0.1, 0.2, 1)
+
+[node name="GameWorld" type="Node2D" parent="." unique_id=1370668906]
+
+[node name="Background" type="ColorRect" parent="GameWorld" unique_id=762253768]
+color = Color(0, 0, 0, 1)
+
+[node name="Entities" type="Node2D" parent="GameWorld" unique_id=883957659]
+
+[node name="Bullets" type="Node2D" parent="GameWorld/Entities" unique_id=1213304726]
+
+[node name="Enemies" type="Node2D" parent="GameWorld/Entities" unique_id=1920101072]
+
+[node name="Supplies" type="Node2D" parent="GameWorld/Entities" unique_id=1711882252]
+
+[node name="Player" type="Node2D" parent="GameWorld/Entities" unique_id=1059480869]
+
+[node name="@Node2D@23641" type="Node2D" parent="GameWorld/Entities" unique_id=1100578415]
+
+[node name="@Node2D@23642" type="Node2D" parent="GameWorld/Entities" unique_id=1766115046]
+
+[node name="@Node2D@23643" type="Node2D" parent="GameWorld/Entities" unique_id=776078930]
+
+[node name="UI" type="CanvasLayer" parent="GameWorld" unique_id=1757296903]
+
+[node name="Entities" type="Node2D" parent="." unique_id=425745971]
+
+[node name="Bullets" type="Node2D" parent="Entities" unique_id=2003710443]
+
+[node name="Enemies" type="Node2D" parent="Entities" unique_id=917520727]
+
+[node name="Supplies" type="Node2D" parent="Entities" unique_id=1642577577]
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1995275761]

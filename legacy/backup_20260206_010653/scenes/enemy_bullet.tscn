@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://boqvqyog6h7aq"]
+
+[ext_resource type="Script" uid="uid://b3aeytekm68a0" path="res://scripts/enemy_bullet.gd" id="1_d2qol"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_qx7rs"]
+
+[node name="enemy_bullet" type="Area2D" unique_id=616574254]
+script = ExtResource("1_d2qol")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=1397350424]
+scale = Vector2(0.5, 0.5)
+
+[node name="CollisionShape" type="CollisionShape2D" parent="." unique_id=593894970]
+shape = SubResource("CircleShape2D_qx7rs")

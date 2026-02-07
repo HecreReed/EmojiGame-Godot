@@ -1,0 +1,6 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local archive (do not commit)
+EmojiGame-master.zip

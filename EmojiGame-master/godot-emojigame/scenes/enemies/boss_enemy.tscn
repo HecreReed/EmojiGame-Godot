@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://boss_enemy_scene"]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_enemy.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/bossenemy-1.png" id="2"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(60, 60)
+
+[node name="BossEnemy" type="Area2D"]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1")
+max_health = 3000
+boss_id = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+scale = Vector2(0.8, 0.8)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="ShootTimer" type="Timer" parent="."]
+wait_time = 0.6
+autostart = true

@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://dq1n43t1qafvl"]
+
+[ext_resource type="Script" uid="uid://cqf8y0p8xkfn1" path="res://scripts/player.gd" id="1_3vyb7"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_g2els"]
+radius = 5.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_qhqgy"]
+radius = 5.0
+
+[node name="player" type="CharacterBody2D" unique_id=1036559401]
+script = ExtResource("1_3vyb7")
+
+[node name="Sprite" type="Sprite2D" parent="." unique_id=964664592]
+
+[node name="CollisionShape" type="CollisionShape2D" parent="." unique_id=1434613754]
+shape = SubResource("CircleShape2D_g2els")
+
+[node name="Hitbox" type="Sprite2D" parent="." unique_id=1633763965]
+modulate = Color(1, 0, 0, 0.5)
+scale = Vector2(0.2, 0.2)
+
+[node name="@Sprite2D@23644" type="Sprite2D" parent="." unique_id=1916032362]
+
+[node name="@CollisionShape2D@23645" type="CollisionShape2D" parent="." unique_id=2024278780]
+shape = SubResource("CircleShape2D_qhqgy")
+
+[node name="@Sprite2D@23646" type="Sprite2D" parent="." unique_id=1932110858]
+modulate = Color(1, 0, 0, 0.5)
+scale = Vector2(0.2, 0.2)
