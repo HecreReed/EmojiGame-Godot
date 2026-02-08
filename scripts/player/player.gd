@@ -574,6 +574,8 @@ func use_bomb():
 			bomb_active = false
 
 func take_damage(amount: int):
+	if GameManager and ("god_mode_enabled" in GameManager) and GameManager.god_mode_enabled:
+		return
 	if GameManager.time_stop_active:
 		return
 	if not is_alive or bomb_active or is_dashing or is_invincible:

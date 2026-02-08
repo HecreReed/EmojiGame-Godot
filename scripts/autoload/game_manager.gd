@@ -21,6 +21,7 @@ var high_score: int = 0
 var money: int = 0
 var power: int = 0  # 0-100
 var is_paused: bool = false
+var god_mode_enabled: bool = false
 var time_stop_active: bool = false
 var time_stop_freeze_player: bool = false
 var time_stop_freeze_boss: bool = true
@@ -101,6 +102,11 @@ func _input(event: InputEvent) -> void:
 	# Global pause toggle (Space / ESC in this project).
 	# Do this here as a safety net even if HUD is not processing input.
 	if event is InputEventKey and (event as InputEventKey).echo:
+		return
+	if event.is_action_pressed("toggle_god_mode"):
+		god_mode_enabled = not god_mode_enabled
+		print("GOD MODE: %s" % ("ON" if god_mode_enabled else "OFF"))
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("pause"):
 		if is_paused:

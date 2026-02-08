@@ -227,6 +227,8 @@ func _physics_process(delta):
 
 func _on_area_entered(area):
 	if area.is_in_group("player"):
+		if GameManager and ("god_mode_enabled" in GameManager) and GameManager.god_mode_enabled:
+			return
 		if GameManager.time_stop_active:
 			return
 		if is_blown_away:
@@ -238,6 +240,8 @@ func _on_area_entered(area):
 
 func _on_body_entered(body):
 	if body.is_in_group("player"):
+		if GameManager and ("god_mode_enabled" in GameManager) and GameManager.god_mode_enabled:
+			return
 		if GameManager.time_stop_active:
 			return
 		if is_blown_away:
@@ -278,6 +282,8 @@ func _apply_wave(delta: float) -> void:
 func _check_overlap_on_time_stop_resume() -> void:
 	# Python parity: time stop renders bullets but does not process collisions.
 	# When time stop ends, if the player is still overlapping a bullet, it should be able to hit.
+	if GameManager and ("god_mode_enabled" in GameManager) and GameManager.god_mode_enabled:
+		return
 	if is_blown_away:
 		return
 
