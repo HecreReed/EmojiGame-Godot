@@ -181,19 +181,16 @@ func _update_spell_bonus() -> void:
 	if phase_time_limit_sec <= 0.0:
 		spell_bonus_current = spell_bonus_start
 		return
-	# Touhou-like: bonus stays at start for 5s, then decreases at a constant rate,
-	# ending at ~1/3 of the starting value at time out.
-	var grace_sec := 5.0
+
+	# Touhou-like: spell bonus decreases from the start at a constant rate.
+	# We clamp to a non-zero minimum so timeouts still award a small remainder.
 	var now_sec := Time.get_ticks_msec() / 1000.0
 	var elapsed := maxf(0.0, now_sec - phase_start_real_sec)
-	if elapsed <= grace_sec or phase_time_limit_sec <= grace_sec:
-		spell_bonus_current = spell_bonus_start
-		return
 
-	var denom := maxf(1.0, phase_time_limit_sec - grace_sec)
-	var rate := (2.0 / 3.0) * float(spell_bonus_start) / denom
-	var value := int(round(float(spell_bonus_start) - rate * (elapsed - grace_sec)))
-	var min_value := int(round(float(spell_bonus_start) / 3.0))
+	var ratio := clampf(elapsed / maxf(0.01, phase_time_limit_sec), 0.0, 1.0)
+	# End at ~1/7 of the starting value at time-out (common Touhou baseline).
+	var value := int(round(float(spell_bonus_start) * (1.0 - (6.0 / 7.0) * ratio)))
+	var min_value := int(round(float(spell_bonus_start) / 7.0))
 	spell_bonus_current = clampi(value, min_value, spell_bonus_start)
 
 func _on_player_hit() -> void:
@@ -3047,7 +3044,7 @@ func _boss3_coin_barrage() -> void:
 func boss4_pattern() -> void:
 	var r := randf()
 	if r < 0.143:
-		_boss4_light_shoot()
+		await _boss4_light_shoot()
 	elif r < 0.286:
 		await _boss4_drag_shoot()
 	elif r < 0.429:
@@ -3057,7 +3054,7 @@ func boss4_pattern() -> void:
 	elif r < 0.715:
 		await _boss4_screen_static()
 	elif r < 0.858:
-		_boss4_orbital_strike()
+		await _boss4_orbital_strike()
 	else:
 		await _boss4_pixel_storm()
 
@@ -3295,10 +3292,19 @@ func _boss4_side_shoot() -> void:
 	# Move turrets apart (5 steps, 0.3s).
 	for _step in range(5):
 		if turrets.size() >= 4:
-			turrets[0].global_position.y -= 8.0
-			turrets[1].global_position.y += 8.0
-			turrets[2].global_position.y -= 8.0
-			turrets[3].global_position.y += 8.0
+			var t0 := turrets[0]
+			var t1 := turrets[1]
+			var t2 := turrets[2]
+			var t3 := turrets[3]
+			# Phase transitions can clear enemy bullets; guard against freed turret nodes.
+			if is_instance_valid(t0):
+				t0.global_position.y -= 8.0
+			if is_instance_valid(t1):
+				t1.global_position.y += 8.0
+			if is_instance_valid(t2):
+				t2.global_position.y -= 8.0
+			if is_instance_valid(t3):
+				t3.global_position.y += 8.0
 		await get_tree().create_timer(0.3).timeout
 
 	# Wait until ~2 seconds since start.
@@ -3361,6 +3367,7 @@ func _boss4_static_flicker(hazard: EnemyBullet, duration: float) -> void:
 
 func _boss4_orbital_strike() -> void:
 	# Python: 4 UFOs orbit the screen edges and fire at the player.
+	var token := _phase_token
 	if not get_parent():
 		return
 	var viewport_size := get_viewport_rect().size
@@ -3390,12 +3397,81 @@ func _boss4_orbital_strike() -> void:
 		ufo.ban_remove = true
 		ufos.append(ufo)
 
-	_boss4_orbital_move(ufos, left_bound, right_bound, top_bound, bottom_bound)
-	_boss4_orbital_shoot(ufos)
+	# Move+shoot in one coroutine to avoid "fire and forget" coroutine pitfalls.
+	# 80 frames @0.1s ~= 8s, shooting every 0.25s ~= 30 volleys.
+	var bullet_speed := sqrt(10.0) * 60.0
+	var shoot_accum := 0.0
+	for _frame in range(80):
+		if _pattern_should_abort(token):
+			break
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				break
+			await get_tree().create_timer(0.1).timeout
+		if _pattern_should_abort(token):
+			break
 
-func _boss4_orbital_move(ufos: Array[EnemyBullet], left_bound: float, right_bound: float, top_bound: float, bottom_bound: float) -> void:
+		# Move along the playfield bounds.
+		for ufo in ufos:
+			if not is_instance_valid(ufo):
+				continue
+			var edge: String = str(ufo.get_meta("edge", "top"))
+			var p := ufo.global_position
+			match edge:
+				"top":
+					p.x += 8.0
+					if p.x >= right_bound:
+						edge = "right"
+						p.y = top_bound
+				"right":
+					p.y += 8.0
+					if p.y >= bottom_bound:
+						edge = "bottom"
+						p.x = right_bound
+				"bottom":
+					p.x -= 8.0
+					if p.x <= left_bound:
+						edge = "left"
+						p.y = bottom_bound
+				"left":
+					p.y -= 8.0
+					if p.y <= top_bound:
+						edge = "top"
+						p.x = left_bound
+			ufo.global_position = p
+			ufo.set_meta("edge", edge)
+
+		# Shoot every 0.25s.
+		shoot_accum += 0.1
+		if shoot_accum >= 0.25:
+			shoot_accum = 0.0
+			var player := _get_player_safe()
+			if player:
+				for ufo in ufos:
+					if not is_instance_valid(ufo):
+						continue
+					var dir := (player.global_position - ufo.global_position)
+					if dir.length() == 0.0:
+						dir = Vector2.LEFT
+					_spawn_bullet_at(ufo.global_position, dir, bullet_speed, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-10.png")
+
+		await get_tree().create_timer(0.1).timeout
+
+	# Cleanup
+	for ufo in ufos:
+		if is_instance_valid(ufo):
+			ufo.queue_free()
+
+func _boss4_orbital_move(token: int, ufos: Array[EnemyBullet], left_bound: float, right_bound: float, top_bound: float, bottom_bound: float) -> void:
 	# 80 frames, step every 0.1s.
 	for _frame in range(80):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		for ufo in ufos:
 			if not is_instance_valid(ufo):
 				continue
@@ -3430,12 +3506,16 @@ func _boss4_orbital_move(ufos: Array[EnemyBullet], left_bound: float, right_boun
 		if is_instance_valid(ufo):
 			ufo.queue_free()
 
-func _boss4_orbital_shoot(ufos: Array[EnemyBullet]) -> void:
+func _boss4_orbital_shoot(token: int, ufos: Array[EnemyBullet]) -> void:
 	var bullet_speed := sqrt(10.0) * 60.0
 	for _i in range(30):
+		if _pattern_should_abort(token):
+			return
 		if not is_instance_valid(self) or not get_parent():
 			return
 		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
 			await get_tree().create_timer(0.1).timeout
 
 		var player := _get_player_safe()

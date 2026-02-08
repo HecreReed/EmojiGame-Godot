@@ -55,6 +55,7 @@ func _ready():
 	# HUD and pause UI must keep receiving input while the game is paused.
 	# Otherwise Resume button / Space / ESC will not work after pause.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process_input(true)
 	if pause_menu:
 		pause_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	if game_over_screen:
@@ -385,6 +386,11 @@ func _input(event):
 
 	# Allow click-to-resume while paused (keyboard pause/resume is handled globally in GameManager).
 	if GameManager.is_paused and pause_menu and pause_menu.visible:
+		# Fallback: allow Space/Enter while paused even if global pause input gets blocked.
+		if event.is_action_pressed("pause") or event.is_action_pressed("ui_accept"):
+			GameManager.resume_game()
+			get_viewport().set_input_as_handled()
+			return
 		# Fallback: allow a left click anywhere on the pause overlay to resume.
 		if event is InputEventMouseButton:
 			var mb := event as InputEventMouseButton

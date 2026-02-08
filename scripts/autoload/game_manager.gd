@@ -87,6 +87,12 @@ func _process(_delta):
 	if score_multiplier > 1.0 and now > multiplier_end_time:
 		score_multiplier = 1.0
 
+	# Time stop ends when the end timestamp is reached.
+	if time_stop_active and now >= _time_stop_end_sec:
+		time_stop_active = false
+		time_stop_freeze_player = false
+		time_stop_freeze_boss = true
+
 	if combo > 0 and now - last_kill_time > combo_timeout:
 		combo = 0
 		combo_changed.emit(combo, 1.0)
@@ -229,7 +235,7 @@ func add_power(amount: int):
 func start_time_stop(duration: float = 2.0, freeze_player: bool = false, freeze_boss: bool = true):
 	# Allows overlapping time stops by extending the end timestamp.
 	var now := Time.get_ticks_msec() / 1000.0
-	_time_stop_end_sec = maxf(_time_stop_end_sec, now + duration)
+	_time_stop_end_sec = maxf(_time_stop_end_sec, now + maxf(0.0, duration))
 
 	if time_stop_active:
 		time_stop_freeze_player = time_stop_freeze_player or freeze_player
@@ -239,11 +245,6 @@ func start_time_stop(duration: float = 2.0, freeze_player: bool = false, freeze_
 	time_stop_freeze_player = freeze_player
 	time_stop_freeze_boss = freeze_boss
 	time_stop_active = true
-	while (Time.get_ticks_msec() / 1000.0) < _time_stop_end_sec:
-		await get_tree().create_timer(0.05).timeout
-	time_stop_active = false
-	time_stop_freeze_player = false
-	time_stop_freeze_boss = true
 
 func set_playfield_bottom_override_y(y: float) -> void:
 	# HUD may report BottomBar's top Y so gameplay never enters it.
