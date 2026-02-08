@@ -56,7 +56,7 @@ func _ready():
 	# Otherwise Resume button / Space / ESC will not work after pause.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if pause_menu:
-		pause_menu.process_mode = Node.PROCESS_MODE_ALWAYS
+		pause_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	if game_over_screen:
 		game_over_screen.process_mode = Node.PROCESS_MODE_ALWAYS
 
@@ -379,19 +379,19 @@ func _on_game_resumed():
 	pause_menu.hide()
 
 func _input(event):
-	# Allow Space/Enter to resume while paused.
-	if GameManager.is_paused and pause_menu and pause_menu.visible:
-		if event.is_action_pressed("ui_accept"):
-			GameManager.resume_game()
-			get_viewport().set_input_as_handled()
-			return
+	# Ignore key repeat to avoid pause/resume flicker (Space is bound to pause in this project).
+	if event is InputEventKey and (event as InputEventKey).echo:
+		return
 
-	if event.is_action_pressed("pause"):
-		if GameManager.is_paused:
-			GameManager.resume_game()
-		else:
-			GameManager.pause_game()
-		get_viewport().set_input_as_handled()
+	# Allow click-to-resume while paused (keyboard pause/resume is handled globally in GameManager).
+	if GameManager.is_paused and pause_menu and pause_menu.visible:
+		# Fallback: allow a left click anywhere on the pause overlay to resume.
+		if event is InputEventMouseButton:
+			var mb := event as InputEventMouseButton
+			if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+				GameManager.resume_game()
+				get_viewport().set_input_as_handled()
+				return
 
 func _on_resume_pressed():
 	GameManager.resume_game()

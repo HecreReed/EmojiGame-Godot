@@ -5,6 +5,7 @@ extends Node
 
 @export var midboss_enabled: bool = true
 @export var midboss_spawn_ratio: float = 0.55 # 0..1 of stage_duration
+@export var stage_script_enabled: bool = true
 
 var is_boss_active: bool = false
 var is_midboss_active: bool = false
@@ -16,6 +17,19 @@ var last_spawn_time: float = 0.0
 var randomkis: float = 0.0
 var max_enemies: int = 2
 var current_wave: int = 1
+
+class StageAction:
+	var t: float = 0.0
+	var action: Callable = Callable()
+
+var _stage_actions: Array[StageAction] = []
+var _stage_action_index: int = 0
+
+func _make_stage_action(t: float, action: Callable) -> StageAction:
+	var a := StageAction.new()
+	a.t = maxf(0.0, t)
+	a.action = action
+	return a
 
 
 func _ready() -> void:
@@ -33,6 +47,7 @@ func _ready() -> void:
 	current_wave = 1
 	is_midboss_active = false
 	_midboss_spawned_this_stage = false
+	_rebuild_stage_script()
 
 	if StageManager and StageManager.has_signal("phase_changed"):
 		StageManager.phase_changed.connect(_on_stage_phase_changed)
@@ -64,6 +79,10 @@ func _process_stage() -> void:
 		if StageManager.stage_elapsed >= StageManager.stage_duration * ratio:
 			_spawn_midboss()
 			return
+
+	if stage_script_enabled:
+		_process_stage_script()
+		return
 
 	var now := Time.get_ticks_msec() / 1000.0
 	var elapsed := now - game_start_time
@@ -107,8 +126,152 @@ func _reset_stage_state() -> void:
 	current_wave = 1
 	is_midboss_active = false
 	_midboss_spawned_this_stage = false
+	_rebuild_stage_script()
 	if StageManager and StageManager.has_method("set_midboss_active"):
 		StageManager.set_midboss_active(false)
+
+func _rebuild_stage_script() -> void:
+	_stage_actions = []
+	_stage_action_index = 0
+	if not stage_script_enabled:
+		return
+	if not StageManager:
+		return
+	_stage_actions = _build_stage_actions(int(StageManager.current_stage))
+
+func _process_stage_script() -> void:
+	if _stage_actions.is_empty():
+		return
+	while _stage_action_index < _stage_actions.size():
+		var a := _stage_actions[_stage_action_index]
+		if StageManager.stage_elapsed < a.t:
+			return
+		if a.action.is_valid():
+			a.action.call()
+		_stage_action_index += 1
+		current_wave += 1
+
+func _build_stage_actions(stage: int) -> Array[StageAction]:
+	var s := clampi(stage, 1, 6)
+	var actions: Array[StageAction] = []
+
+	# Touhou-like: scripted formations on a timeline (stage_elapsed seconds).
+	# Keep it deterministic; difficulty is driven by stage number and formations.
+	var t := 0.6
+	var gap := 2.8
+	for wave in range(14):
+		var kind := _pick_stage_enemy_kind(s, wave)
+		match wave % 4:
+			0:
+				actions.append(_make_stage_action(t, Callable(self, "_spawn_line").bind(kind, 6, Enemy.ScriptedMoveMode.STRAIGHT_LEFT)))
+			1:
+				actions.append(_make_stage_action(t, Callable(self, "_spawn_v").bind(kind, 5, Enemy.ScriptedMoveMode.SINE_LEFT, 70.0, 2.4)))
+			2:
+				actions.append(_make_stage_action(t, Callable(self, "_spawn_pair_stoppers").bind(Enemy.EnemyKind.SNIPER, 900.0, 2.2)))
+			_:
+				actions.append(_make_stage_action(t, Callable(self, "_spawn_divers").bind(kind, 4)))
+
+		t += gap
+
+	# Late stage push (before boss): a few denser formations.
+	actions.append(_make_stage_action(44.0, Callable(self, "_spawn_line").bind(_pick_stage_enemy_kind(s, 99), 8, Enemy.ScriptedMoveMode.SINE_LEFT)))
+	actions.append(_make_stage_action(49.0, Callable(self, "_spawn_divers").bind(_pick_stage_enemy_kind(s, 100), 6)))
+	return actions
+
+func _pick_stage_enemy_kind(stage: int, wave: int) -> int:
+	match stage:
+		1:
+			var pool1: Array[int] = [Enemy.EnemyKind.BASE_1, Enemy.EnemyKind.BASE_2, Enemy.EnemyKind.FAST, Enemy.EnemyKind.SNIPER]
+			return pool1[wave % pool1.size()]
+		2:
+			var pool2: Array[int] = [Enemy.EnemyKind.BASE_4, Enemy.EnemyKind.BASE_5, Enemy.EnemyKind.SHIELD, Enemy.EnemyKind.SPLIT, Enemy.EnemyKind.FAST]
+			return pool2[wave % pool2.size()]
+		3:
+			var pool3: Array[int] = [Enemy.EnemyKind.TANK, Enemy.EnemyKind.SUICIDE, Enemy.EnemyKind.SNIPER, Enemy.EnemyKind.BASE_6]
+			return pool3[wave % pool3.size()]
+		4:
+			var pool4: Array[int] = [Enemy.EnemyKind.FAST, Enemy.EnemyKind.ELITE, Enemy.EnemyKind.SHIELD, Enemy.EnemyKind.BASE_7]
+			return pool4[wave % pool4.size()]
+		5:
+			var pool5: Array[int] = [Enemy.EnemyKind.ELITE, Enemy.EnemyKind.TANK, Enemy.EnemyKind.SUICIDE, Enemy.EnemyKind.SPLIT]
+			return pool5[wave % pool5.size()]
+		6:
+			var pool6: Array[int] = [Enemy.EnemyKind.ELITE, Enemy.EnemyKind.SUICIDE, Enemy.EnemyKind.SNIPER, Enemy.EnemyKind.SHIELD]
+			return pool6[wave % pool6.size()]
+		_:
+			return Enemy.EnemyKind.BASE_1
+
+func _spawn_enemy_scripted(kind: int, pos: Vector2, move_mode: int, sine_amp: float, sine_freq: float) -> void:
+	if not enemy_scene or not get_parent():
+		return
+	var enemy := enemy_scene.instantiate() as Enemy
+	if not enemy:
+		return
+	enemy.enemy_kind = kind
+	enemy.scripted_move_mode = move_mode
+	enemy.scripted_sine_amplitude = sine_amp
+	enemy.scripted_sine_frequency = sine_freq
+	enemy.global_position = pos
+	get_parent().add_child(enemy)
+
+func _playfield_bottom() -> float:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	return playfield_bottom
+
+func _spawn_line(kind: int, count: int, move_mode: int) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := _playfield_bottom()
+	var n := maxi(1, count)
+	var top := 80.0
+	var bottom := maxf(top + 40.0, playfield_bottom - 140.0)
+	var span := maxf(1.0, bottom - top)
+
+	for i in range(n):
+		var t := float(i) / float(maxi(1, n - 1))
+		var y := top + span * t
+		var x := viewport_size.x + 80.0 + float(i) * 55.0
+		_spawn_enemy_scripted(kind, Vector2(x, y), move_mode, 60.0, 2.2)
+
+func _spawn_v(kind: int, count: int, move_mode: int, sine_amp: float, sine_freq: float) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := _playfield_bottom()
+	var center_y := clampf(playfield_bottom * 0.5, 140.0, playfield_bottom - 160.0)
+	var n := maxi(3, count)
+	var half := int(floor(float(n) / 2.0))
+	for i in range(n):
+		var offset := float(i - half) * 70.0
+		var y := clampf(center_y + offset, 80.0, playfield_bottom - 140.0)
+		var x := viewport_size.x + 60.0 + float(i) * 60.0
+		_spawn_enemy_scripted(kind, Vector2(x, y), move_mode, sine_amp, sine_freq)
+
+func _spawn_pair_stoppers(kind: int, stop_x: float, stop_duration: float) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := _playfield_bottom()
+	var ys := [140.0, maxf(140.0, playfield_bottom - 220.0)]
+	for i in range(ys.size()):
+		if not enemy_scene or not get_parent():
+			return
+		var enemy := enemy_scene.instantiate() as Enemy
+		if not enemy:
+			continue
+		enemy.enemy_kind = kind
+		enemy.scripted_move_mode = Enemy.ScriptedMoveMode.STOP_AND_GO
+		enemy.scripted_stop_x = stop_x
+		enemy.scripted_stop_duration = stop_duration
+		enemy.global_position = Vector2(viewport_size.x + 120.0 + float(i) * 120.0, float(ys[i]))
+		get_parent().add_child(enemy)
+
+func _spawn_divers(kind: int, count: int) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var playfield_bottom := _playfield_bottom()
+	var n := maxi(1, count)
+	for i in range(n):
+		var y := randf_range(90.0, maxf(90.0, playfield_bottom - 140.0))
+		var x := viewport_size.x + 80.0 + float(i) * 80.0
+		_spawn_enemy_scripted(kind, Vector2(x, y), Enemy.ScriptedMoveMode.DIVE_AT_PLAYER, 0.0, 0.0)
 
 func _spawn_midboss() -> void:
 	if not enemy_scene:
@@ -128,34 +291,74 @@ func _spawn_midboss() -> void:
 	for b in get_tree().get_nodes_in_group("enemy_bullets"):
 		if b and is_instance_valid(b):
 			b.queue_free()
-
-	var midboss := enemy_scene.instantiate() as Enemy
-	if not midboss:
-		is_midboss_active = false
-		if StageManager and StageManager.has_method("set_midboss_active"):
-			StageManager.set_midboss_active(false)
-		return
-
-	midboss.enemy_kind = Enemy.EnemyKind.MINIBOSS
+	for z in get_tree().get_nodes_in_group("slow_zone"):
+		if z and is_instance_valid(z):
+			z.queue_free()
+	for h in get_tree().get_nodes_in_group("boss_hazards"):
+		if h and is_instance_valid(h):
+			h.queue_free()
 
 	var viewport_size := get_viewport().get_visible_rect().size
 	var playfield_bottom := viewport_size.y
 	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
 		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
-	var half := 20.0
-	midboss.global_position = Vector2(
-		# Keep within Enemy._remove_if_outside_screen() right-side grace range.
-		viewport_size.x + randf_range(0.0, 100.0) + half,
-		randf_range(80.0, max(80.0, playfield_bottom - 120.0)) + half
-	)
 
-	midboss.tree_exited.connect(_on_midboss_defeated)
-	get_parent().add_child(midboss)
+	# Prefer a real BossEnemy so the midboss has proper spellcard phases.
+	var midboss: Node = null
+	if boss_scene:
+		midboss = boss_scene.instantiate()
+
+	if midboss and ("is_midboss" in midboss):
+		midboss.is_midboss = true
+	if midboss and ("boss_id" in midboss):
+		midboss.boss_id = int(StageManager.current_stage)
+
+	if midboss and (midboss is Node2D):
+		var half := 40.0
+		(midboss as Node2D).global_position = Vector2(
+			viewport_size.x + randf_range(40.0, 160.0) + half,
+			randf_range(120.0, max(120.0, playfield_bottom - 180.0)) + half
+		)
+		midboss.tree_exited.connect(_on_midboss_defeated)
+		get_parent().add_child(midboss)
+		return
+
+	# Fallback: legacy MINIBOSS enemy.
+	var legacy := enemy_scene.instantiate() as Enemy
+	if not legacy:
+		is_midboss_active = false
+		if StageManager and StageManager.has_method("set_midboss_active"):
+			StageManager.set_midboss_active(false)
+		return
+	legacy.enemy_kind = Enemy.EnemyKind.MINIBOSS
+	var legacy_half := 20.0
+	legacy.global_position = Vector2(
+		viewport_size.x + randf_range(0.0, 100.0) + legacy_half,
+		randf_range(80.0, max(80.0, playfield_bottom - 120.0)) + legacy_half
+	)
+	legacy.tree_exited.connect(_on_midboss_defeated)
+	get_parent().add_child(legacy)
 
 func _on_midboss_defeated() -> void:
 	is_midboss_active = false
 	if StageManager and StageManager.has_method("set_midboss_active"):
 		StageManager.set_midboss_active(false)
+	# Cleanup any lingering bullets/hazards from the midboss segment.
+	if not is_inside_tree():
+		return
+	var tree := get_tree()
+	for b in tree.get_nodes_in_group("enemy_bullets"):
+		if b and is_instance_valid(b):
+			b.queue_free()
+	for z in tree.get_nodes_in_group("slow_zone"):
+		if z and is_instance_valid(z):
+			z.queue_free()
+	for h in tree.get_nodes_in_group("boss_hazards"):
+		if h and is_instance_valid(h):
+			h.queue_free()
+	for p in tree.get_nodes_in_group("prevent"):
+		if p and is_instance_valid(p):
+			p.queue_free()
 	last_spawn_time = Time.get_ticks_msec() / 1000.0
 
 

@@ -24,6 +24,8 @@ func _ready() -> void:
 	var mode := "boss"
 	var stage := 5
 	var stage_duration_override := -1.0
+	var stage_start_ratio := 0.60
+	var midboss_enabled_override: Variant = null
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--mode="):
 			mode = arg.get_slice("=", 1)
@@ -31,12 +33,20 @@ func _ready() -> void:
 			stage = maxi(1, int(arg.get_slice("=", 1)))
 		if arg.begins_with("--stage-duration="):
 			stage_duration_override = float(arg.get_slice("=", 1))
+		if arg.begins_with("--stage-start-ratio="):
+			stage_start_ratio = clampf(float(arg.get_slice("=", 1)), 0.0, 1.0)
+		if arg.begins_with("--midboss="):
+			var v := arg.get_slice("=", 1).to_lower()
+			midboss_enabled_override = (v == "1" or v == "true" or v == "on" or v == "yes")
 	StageManager.current_stage = stage
+
+	var spawner := get_tree().root.get_node_or_null("Main/EnemySpawner")
+	if spawner and midboss_enabled_override != null and ("midboss_enabled" in spawner):
+		spawner.midboss_enabled = bool(midboss_enabled_override)
 
 	if mode == "stage":
 		StageManager.stage_duration = 1.0 if stage_duration_override <= 0.0 else stage_duration_override
-		# Jump close to midboss spawn point so EnemySpawner can be exercised quickly.
-		StageManager.stage_elapsed = StageManager.stage_duration * 0.60
+		StageManager.stage_elapsed = StageManager.stage_duration * stage_start_ratio
 	else:
 		StageManager.stage_duration = 0.1 if stage_duration_override <= 0.0 else stage_duration_override
 		StageManager.enter_boss_phase()
@@ -48,7 +58,8 @@ func _process(_delta: float) -> void:
 	if _frame % report_every_frames == 0:
 		var boss_count := get_tree().get_nodes_in_group("boss").size()
 		var bullet_count := get_tree().get_nodes_in_group("enemy_bullets").size()
-		print("frame=%d boss=%d enemy_bullets=%d stage_elapsed=%.2f midboss=%s" % [_frame, boss_count, bullet_count, StageManager.stage_elapsed, str(StageManager.midboss_active)])
+		var enemy_count := get_tree().get_nodes_in_group("enemies").size()
+		print("frame=%d boss=%d enemies=%d enemy_bullets=%d stage_elapsed=%.2f midboss=%s" % [_frame, boss_count, enemy_count, bullet_count, StageManager.stage_elapsed, str(StageManager.midboss_active)])
 
 	if _frame >= total_frames:
 		get_tree().quit(0)

@@ -14,10 +14,13 @@ enum BulletType {
 @export var bullet_type: BulletType = BulletType.NORMAL
 @export var can_return: bool = false # Python: canReturn (bounce off walls)
 @export var can_delete: bool = true # Python: canDelete (remove on hit)
+@export var can_remove: bool = true # Python: canRemove (removed by Boss2 prevent barriers)
 @export var ban_remove: bool = false # Python: banRemove (do not despawn when offscreen)
 @export var rotate_with_direction: bool = true # Default: face movement direction
 @export var spin_speed: float = 0.0 # Radians/sec, for spinning bullets (e.g. Boss1 star)
 @export var turn_rate: float = 0.0 # Radians/sec, rotates movement direction over time
+@export var start_delay: float = 0.0 # Seconds before the bullet starts moving
+@export var acceleration: float = 0.0 # px/s^2, applied after start_delay
 
 var direction: Vector2 = Vector2.LEFT
 var target_position: Vector2 = Vector2.ZERO
@@ -26,6 +29,16 @@ var tan_value: float = 0.0
 var rotation_angle: float = 0.0
 var is_blown_away: bool = false
 var _was_time_stop_active: bool = false
+
+# Orbit (Touhou-like gimmick): keep the bullet circling for a while, then optionally dash.
+var orbit_center: Vector2 = Vector2.ZERO
+var orbit_radius: float = 0.0
+var orbit_angle: float = 0.0
+var orbit_angular_speed: float = 0.0 # rad/s
+var orbit_time_left: float = 0.0
+var dash_after_orbit: bool = false
+var dash_target: Vector2 = Vector2.ZERO
+var dash_speed: float = 0.0
 
 func _ready():
 	add_to_group("enemy_bullets")  # 加入敌方子弹组，用于炸弹/清屏清除
@@ -39,17 +52,34 @@ func _physics_process(delta):
 	_was_time_stop_active = time_stop_now
 
 	if not time_stop_now:
-		if tracking_enabled and bullet_type == BulletType.TRACKING:
-			# 真·追踪（Boss2等需要）
-			aim_at_player()
+		# Start delay (telegraph): the bullet exists but doesn't move yet.
+		if start_delay > 0.0:
+			start_delay = maxf(0.0, start_delay - delta)
+		elif orbit_time_left > 0.0:
+			orbit_time_left = maxf(0.0, orbit_time_left - delta)
+			orbit_angle += orbit_angular_speed * delta
+			global_position = orbit_center + Vector2(cos(orbit_angle), sin(orbit_angle)) * orbit_radius
+			if orbit_time_left <= 0.0 and dash_after_orbit:
+				var to_target := dash_target - global_position
+				if to_target.length() > 0.0:
+					direction = to_target.normalized()
+				speed = dash_speed
+				dash_after_orbit = false
+		else:
+			if tracking_enabled and bullet_type == BulletType.TRACKING:
+				# 真·追踪（Boss2等需要）
+				aim_at_player()
 
-		if turn_rate != 0.0 and direction.length() > 0.0:
-			direction = direction.rotated(turn_rate * delta).normalized()
+			if turn_rate != 0.0 and direction.length() > 0.0:
+				direction = direction.rotated(turn_rate * delta).normalized()
 
-		position += direction * speed * delta
+			if acceleration != 0.0:
+				speed = maxf(0.0, speed + acceleration * delta)
 
-		if can_return:
-			_apply_wall_bounce()
+			position += direction * speed * delta
+
+			if can_return:
+				_apply_wall_bounce()
 
 	# Visual rotation
 	if rotate_with_direction and direction.length() > 0:

@@ -23,8 +23,21 @@ enum EnemyKind {
 	MINIBOSS = 18
 }
 
+enum ScriptedMoveMode {
+	DEFAULT,
+	STRAIGHT_LEFT,
+	SINE_LEFT,
+	STOP_AND_GO,
+	DIVE_AT_PLAYER
+}
+
 @export var enemy_kind: int = EnemyKind.BASE_1
 @export var bullet_scene: PackedScene
+@export var scripted_move_mode: int = ScriptedMoveMode.DEFAULT
+@export var scripted_sine_amplitude: float = 80.0
+@export var scripted_sine_frequency: float = 2.2
+@export var scripted_stop_x: float = 820.0
+@export var scripted_stop_duration: float = 1.4
 
 var health: int = 50
 var max_health: int = 50
@@ -42,6 +55,13 @@ var interval_time_sec: float = 0.0
 var cotime_sec: float = 0.0
 var move_direction: String = "left"
 var can_change_move: bool = true
+
+# Touhou-like scripted movement state
+var _scripted_time: float = 0.0
+var _scripted_base_y: float = 0.0
+var _scripted_stop_state: int = 0
+var _scripted_stop_elapsed: float = 0.0
+var _scripted_dive_dir: Vector2 = Vector2.LEFT
 
 # Special spawns (e.g. Boss4 UFO) can bypass the kind-based setup logic.
 var use_custom_setup: bool = false
@@ -84,12 +104,22 @@ func _ready() -> void:
 
 	spawn_time_sec = Time.get_ticks_msec() / 1000.0
 	cotime_sec = spawn_time_sec
+	_scripted_time = 0.0
+	_scripted_base_y = global_position.y
+	_scripted_stop_state = 0
+	_scripted_stop_elapsed = 0.0
 
 	if not use_custom_setup:
 		_setup_by_kind()
 		_apply_visual()
 	else:
 		max_health = maxi(max_health, health)
+
+	if scripted_move_mode == ScriptedMoveMode.DIVE_AT_PLAYER:
+		var player := get_tree().get_first_node_in_group("player") as Node2D
+		if player and is_instance_valid(player) and not player.is_queued_for_deletion():
+			var d := (player.global_position - global_position)
+			_scripted_dive_dir = d.normalized() if d.length() > 0.0 else Vector2.LEFT
 
 	# Midboss should show up in the boss UI, but must not affect StageManager.
 	if is_midboss:
@@ -110,15 +140,48 @@ func _physics_process(delta: float) -> void:
 	var now_sec := Time.get_ticks_msec() / 1000.0
 	interval_time_sec = now_sec - spawn_time_sec
 
-	if enemy_kind != EnemyKind.FAST and enemy_kind != EnemyKind.SUICIDE:
-		_update_python_random_direction(now_sec, 0.2)
-
-	_move_by_kind(delta, now_sec)
+	_scripted_time += delta
+	if scripted_move_mode != ScriptedMoveMode.DEFAULT:
+		_move_scripted(delta)
+	else:
+		if enemy_kind != EnemyKind.FAST and enemy_kind != EnemyKind.SUICIDE:
+			_update_python_random_direction(now_sec, 0.2)
+		_move_by_kind(delta, now_sec)
 
 	_remove_if_outside_screen()
 
 	if can_shoot:
 		shoot()
+
+func _move_scripted(delta: float) -> void:
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
+	match scripted_move_mode:
+		ScriptedMoveMode.STRAIGHT_LEFT:
+			global_position.x -= speed * delta
+		ScriptedMoveMode.SINE_LEFT:
+			global_position.x -= speed * delta
+			global_position.y = _scripted_base_y + sin(_scripted_time * scripted_sine_frequency) * scripted_sine_amplitude
+			global_position.y = clampf(global_position.y, HALF_SIZE, playfield_bottom - HALF_SIZE)
+		ScriptedMoveMode.STOP_AND_GO:
+			if _scripted_stop_state == 0:
+				global_position.x -= speed * delta
+				if global_position.x <= scripted_stop_x:
+					_scripted_stop_state = 1
+					_scripted_stop_elapsed = 0.0
+			elif _scripted_stop_state == 1:
+				_scripted_stop_elapsed += delta
+				if _scripted_stop_elapsed >= scripted_stop_duration:
+					_scripted_stop_state = 2
+			else:
+				global_position.x -= speed * delta
+		ScriptedMoveMode.DIVE_AT_PLAYER:
+			global_position += _scripted_dive_dir * speed * delta
+		_:
+			global_position.x -= speed * delta
 
 
 func _setup_by_kind() -> void:

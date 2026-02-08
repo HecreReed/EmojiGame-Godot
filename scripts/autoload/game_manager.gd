@@ -73,6 +73,11 @@ var achievements := {
 }
 
 func _ready():
+	# Must still receive pause/resume input while the game is paused.
+	# Otherwise the project can get stuck in a paused state if UI input is blocked.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process_input(true)
+
 	load_high_score()
 	reset_run_state()
 
@@ -85,6 +90,18 @@ func _process(_delta):
 	if combo > 0 and now - last_kill_time > combo_timeout:
 		combo = 0
 		combo_changed.emit(combo, 1.0)
+
+func _input(event: InputEvent) -> void:
+	# Global pause toggle (Space / ESC in this project).
+	# Do this here as a safety net even if HUD is not processing input.
+	if event is InputEventKey and (event as InputEventKey).echo:
+		return
+	if event.is_action_pressed("pause"):
+		if is_paused:
+			resume_game()
+		else:
+			pause_game()
+		get_viewport().set_input_as_handled()
 
 func add_score(amount: int, use_combo: bool = false):
 	var actual_score := float(amount) * score_multiplier

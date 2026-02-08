@@ -101,9 +101,15 @@ func _explode() -> void:
 	# BombardmentShot.explode(): damage falloff by distance.
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	for enemy in enemies:
-		if not enemy or not enemy.has_method("take_damage") or not (enemy is Node2D):
+		if not enemy or not is_instance_valid(enemy):
+			continue
+		if enemy.is_queued_for_deletion():
+			continue
+		if not enemy.has_method("take_damage") or not (enemy is Node2D):
 			continue
 		var enemy_node := enemy as Node2D
+		if not is_instance_valid(enemy_node):
+			continue
 		var dist: float = enemy_node.global_position.distance_to(global_position)
 		if dist <= explosion_radius:
 			var ratio: float = 1.0 - (dist / explosion_radius)
@@ -117,12 +123,20 @@ func _update_homing() -> void:
 	var closest: Node2D = null
 	var min_dist := INF
 	for e in enemies:
-		if e is Node2D:
-			var d := (e as Node2D).global_position.distance_to(global_position)
-			if d < min_dist:
-				min_dist = d
-				closest = e as Node2D
-	if closest:
+		if not e or not is_instance_valid(e):
+			continue
+		if e.is_queued_for_deletion():
+			continue
+		if not (e is Node2D):
+			continue
+		var node := e as Node2D
+		if not is_instance_valid(node):
+			continue
+		var d := node.global_position.distance_to(global_position)
+		if d < min_dist:
+			min_dist = d
+			closest = node
+	if closest and is_instance_valid(closest) and not closest.is_queued_for_deletion():
 		direction = (closest.global_position - global_position).normalized()
 
 

@@ -4,6 +4,7 @@ class_name BossEnemy
 @export var boss_health: int = 2000
 @export var boss_id: int = 1  # 1-6
 @export var boss_speed: float = 100.0
+@export var boss_bullet_speed_scale: float = 0.80 # Leave reaction time; applies to this boss' bullets
 
 enum PhaseKind { NONSPELL, SPELL, FINAL }
 enum PatternPoolMode { CYCLE, RANDOM }
@@ -103,15 +104,18 @@ func _ready() -> void:
 	var stage: int = maxi(1, int(StageManager.current_stage))
 	# Boss durability (Touhou-like): multiple bars should not melt instantly.
 	var baseline_hp: int = 20000 + (stage - 1) * 15000
+	if is_midboss:
+		# Midboss should be chunky, but clearly below the stage boss.
+		baseline_hp = 9000 + (stage - 1) * 6500
 	var total_hp: int = maxi(int(boss_health), baseline_hp)
-	if boss_id == 6:
+	if boss_id == 6 and not is_midboss:
 		# Final boss gets a bit more total HP (5 bars).
 		total_hp = int(round(float(total_hp) * 1.6))
 		is_phase_boss = true
 
 	boss_health = total_hp
 	speed = boss_speed + float(stage - 1) * 12.0
-	score_value = 10000 + (stage - 1) * 1200
+	score_value = (4500 if is_midboss else 10000) + (stage - 1) * 1200
 	damage = 20 + (stage - 1) * 2
 
 	_apply_boss_visual()
@@ -121,7 +125,7 @@ func _ready() -> void:
 	if shoot_timer:
 		shoot_timer.stop()
 
-	phase_defs = _build_touhou_phase_defs(total_hp)
+	phase_defs = _build_midboss_phase_defs(total_hp) if is_midboss else _build_touhou_phase_defs(total_hp)
 	_start_phase(0)
 
 	# Spell Bonus invalidation hooks
@@ -707,6 +711,90 @@ func _build_touhou_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 		_:
 			return _build_boss1_phases(total_hp)
 
+func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
+	# Two-bar midboss: NONSPELL -> SPELL.
+	var hps := _alloc_phase_hp(total_hp, [0.56, 0.44])
+
+	var nonspell_pool: Array[Callable] = []
+	var spell_pool: Array[Callable] = []
+
+	match boss_id:
+		1:
+			nonspell_pool = [
+				Callable(self, "_boss1_nonspell_step"),
+				Callable(self, "_boss1_sand_shoot"),
+				Callable(self, "_boss1_shoot_aside")
+			]
+			spell_pool = [
+				Callable(self, "_boss1_star_shoot"),
+				Callable(self, "_boss1_lightning_chain"),
+				Callable(self, "_boss1_mirror_shoot")
+			]
+		2:
+			nonspell_pool = [
+				Callable(self, "_boss2_nonspell_step"),
+				Callable(self, "_boss2_generate_love"),
+				Callable(self, "_boss2_heart_trap"),
+				Callable(self, "_boss2_heart_orbit_dive")
+			]
+			spell_pool = [
+				Callable(self, "_boss2_use_attract"),
+				Callable(self, "_boss2_heart_rain"),
+				Callable(self, "_boss2_reverse_time")
+			]
+		3:
+			nonspell_pool = [
+				Callable(self, "_boss3_nonspell_step"),
+				Callable(self, "_boss3_super_shoot"),
+				Callable(self, "_boss3_time_lock_ring")
+			]
+			spell_pool = [
+				Callable(self, "_boss3_time_stop"),
+				Callable(self, "_boss3_time_bubble"),
+				Callable(self, "_boss3_golden_storm")
+			]
+		4:
+			nonspell_pool = [
+				Callable(self, "_boss4_light_single"),
+				Callable(self, "_boss4_drag_shoot"),
+				Callable(self, "_boss4_side_shoot")
+			]
+			spell_pool = [
+				Callable(self, "_boss4_screen_static"),
+				Callable(self, "_boss4_light_shoot"),
+				Callable(self, "_boss4_orbital_strike")
+			]
+		5:
+			nonspell_pool = [
+				Callable(self, "_boss5_throw_tnt"),
+				Callable(self, "_boss5_jump_shoot"),
+				Callable(self, "_boss5_chain_explosion")
+			]
+			spell_pool = [
+				Callable(self, "_boss5_gravity_sink"),
+				Callable(self, "_boss5_heal_mode"),
+				Callable(self, "_boss5_mirror_tnt")
+			]
+		6:
+			nonspell_pool = [
+				Callable(self, "_boss6_phase1_fire_rain"),
+				Callable(self, "shoot_double_spiral"),
+				Callable(self, "shoot_tracking_burst")
+			]
+			spell_pool = [
+				Callable(self, "_boss6_spell1_spiral_fire"),
+				Callable(self, "shoot_pentagram"),
+				Callable(self, "shoot_chaos_pattern")
+			]
+		_:
+			nonspell_pool = [Callable(self, "_boss1_nonspell_step")]
+			spell_pool = [Callable(self, "_boss1_star_shoot")]
+
+	return [
+		_make_phase_mix(PhaseKind.NONSPELL, "Mid Nonspell", hps[0], 35.0, 0.65, 0.50, 0.9, nonspell_pool[0], nonspell_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Mid Spell", hps[1], 45.0, 0.0, 0.40, 1.1, spell_pool[0], spell_pool)
+	]
+
 func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var hps := _alloc_phase_hp(total_hp, [0.18, 0.20, 0.18, 0.20, 0.24])
 
@@ -1014,6 +1102,118 @@ func _pattern_bouncy_star_stream(
 
 		await get_tree().create_timer(delay).timeout
 
+func _spawn_orbit_dash_ring(
+	center: Vector2,
+	target: Vector2,
+	texture_path: String,
+	bullet_count: int,
+	orbit_radius: float,
+	orbit_time_sec: float,
+	orbit_speed_deg_per_sec: float,
+	dash_speed_tick: float
+) -> void:
+	var count := maxi(4, bullet_count)
+	var base_offset := randf_range(0.0, TAU)
+	var omega := deg_to_rad(orbit_speed_deg_per_sec)
+	var scale := clampf(boss_bullet_speed_scale, 0.05, 5.0)
+	var dash_speed := dash_speed_tick * 60.0 * scale
+
+	for i in range(count):
+		var angle := base_offset + (TAU / float(count)) * float(i)
+		var pos := center + Vector2(cos(angle), sin(angle)) * orbit_radius
+		var bullet := _spawn_bullet_at(pos, Vector2.ZERO, 0.0, EnemyBullet.BulletType.NORMAL, texture_path)
+		if not bullet:
+			continue
+
+		bullet.direction = Vector2.ZERO
+		bullet.rotate_with_direction = false
+		bullet.orbit_center = center
+		bullet.orbit_radius = orbit_radius
+		bullet.orbit_angle = angle
+		bullet.orbit_angular_speed = omega
+		bullet.orbit_time_left = maxf(0.0, orbit_time_sec)
+		bullet.dash_after_orbit = true
+		bullet.dash_target = target
+		bullet.dash_speed = dash_speed
+
+func _boss2_heart_orbit_dive() -> void:
+	# Unique Boss2 pattern: hearts orbit briefly, then all converge on a single point.
+	var token := _phase_token
+	for wave in range(3):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+
+		var viewport_size := get_viewport_rect().size
+		var playfield_bottom := viewport_size.y
+		if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+			playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
+		# Pick a "kill zone" near the player but clamp into the playfield.
+		var target := player.global_position + Vector2(randf_range(-60.0, 60.0), randf_range(-80.0, 80.0))
+		target.x = clampf(target.x, 80.0, viewport_size.x - 80.0)
+		target.y = clampf(target.y, 80.0, playfield_bottom - 80.0)
+
+		_spawn_orbit_dash_ring(
+			global_position,
+			target,
+			"res://assets/sprites/bossbullut-4.png",
+			16 + wave * 2,
+			110.0 + float(wave) * 20.0,
+			1.1,
+			220.0 if (wave % 2) == 0 else -220.0,
+			10.0 + float(wave) * 0.6
+		)
+
+		await get_tree().create_timer(0.55).timeout
+
+func _boss3_time_lock_ring() -> void:
+	# Unique Boss3 pattern: a delayed "time lock" ring that collapses onto the player.
+	var token := _phase_token
+	var player := _get_player_safe()
+	if not player:
+		return
+
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
+	var center := player.global_position
+	center.x = clampf(center.x, 80.0, viewport_size.x - 80.0)
+	center.y = clampf(center.y, 80.0, playfield_bottom - 80.0)
+
+	var rings: Array[float] = [110.0, 165.0, 220.0]
+	for ring_radius_value in rings:
+		var ring_radius := float(ring_radius_value)
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var count := 18
+		var base_angle := randf_range(0.0, TAU)
+		for i in range(count):
+			var angle := base_angle + (TAU / float(count)) * float(i)
+			var pos: Vector2 = center + Vector2(cos(angle), sin(angle)) * ring_radius
+			var dir: Vector2 = (center - pos).normalized()
+			var bullet := _spawn_bullet_at(pos, dir, 6.2 * 60.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-5.png")
+			if bullet:
+				bullet.start_delay = 0.75
+				bullet.acceleration = 180.0
+				bullet.rotate_with_direction = false
+
+		await get_tree().create_timer(0.22).timeout
+
 func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var hps := _alloc_phase_hp(total_hp, [0.18, 0.20, 0.18, 0.20, 0.24])
 	var nonspell_1_pool: Array[Callable] = [
@@ -1022,16 +1222,16 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss2_heart_trap"),
 		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-3.png", 8.0, 7, 26.0, 3, 0.22),
 		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-4.png", 18, 5.6, 2, 0.55),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-4.png", 6.2, 18, 16.0, 0.05, 2, 26.0, true)
+		Callable(self, "_boss2_heart_orbit_dive")
 	]
 
 	var spell_1_pool: Array[Callable] = [
 		Callable(self, "_boss2_heart_rain"),
 		Callable(self, "_boss2_use_attract"),
 		Callable(self, "_boss2_heart_trap"),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-4.png", 12, 6.0, 12.0, 2, 0.5, 90.0, 55.0),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-4.png", 8, 9.5, 2, 0.75),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-3.png", 22, 6.2, 120.0, 2, 0.7)
+		Callable(self, "_boss2_generate_love"),
+		Callable(self, "_boss2_heart_orbit_dive"),
+		Callable(self, "_boss2_split_bomb")
 	]
 
 	var nonspell_2_pool: Array[Callable] = [
@@ -1039,16 +1239,16 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss2_use_attract"),
 		Callable(self, "_boss2_made_in_heaven"),
 		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-3.png", 9.0, 5, 18.0, 5, 0.16),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-3.png", 6.8, 22, 14.0, 0.045, 3, 34.0, false)
+		Callable(self, "_boss2_heart_orbit_dive")
 	]
 
 	var spell_2_pool: Array[Callable] = [
 		Callable(self, "_boss2_reverse_time"),
 		Callable(self, "_boss2_use_attract"),
 		Callable(self, "_boss2_heart_rain"),
-		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-4.png", 24, 5.2, 2, 0.75),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-3.png", 9, 10.0, 2, 0.7),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-4.png", 6.8, 22, 18.0, 0.045, 2, 40.0, true)
+		Callable(self, "_boss2_generate_love"),
+		Callable(self, "_boss2_heart_orbit_dive"),
+		Callable(self, "_boss2_heart_trap")
 	]
 
 	var final_pool: Array[Callable] = [
@@ -1056,9 +1256,9 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss2_made_in_heaven"),
 		Callable(self, "_boss2_reverse_time"),
 		Callable(self, "_boss2_use_attract"),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-4.png", 16, 6.5, 13.5, 2, 0.45, 105.0, 60.0),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-3.png", 28, 7.2, 160.0, 2, 0.65),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-3.png", 10, 11.0, 2, 0.6)
+		Callable(self, "_boss2_heart_rain"),
+		Callable(self, "_boss2_heart_orbit_dive"),
+		Callable(self, "_boss2_heart_trap")
 	]
 	return [
 		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.65, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
@@ -1078,42 +1278,43 @@ func _build_boss3_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var nonspell_1_pool: Array[Callable] = [
 		Callable(self, "_boss3_nonspell_step"),
 		Callable(self, "_boss3_super_shoot"),
-		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-6.png", 10.0, 6, 24.0, 3, 0.22),
-		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-5.png", 20, 6.5, 2, 0.55),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-6.png", 7.0, 22, 14.0, 0.045, 2, 26.0, true)
+		Callable(self, "_boss3_time_lock_ring"),
+		Callable(self, "_boss3_golden_storm"),
+		Callable(self, "_boss3_coin_barrage")
 	]
 
 	var spell_1_pool: Array[Callable] = [
 		Callable(self, "_boss3_golden_storm"),
 		Callable(self, "_boss3_set_gold"),
 		Callable(self, "_boss3_cut_body"),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-6.png", 24, 6.8, 120.0, 2, 0.65),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-6.png", 12, 7.0, 13.0, 2, 0.5, 95.0, 55.0)
+		Callable(self, "_boss3_time_lock_ring"),
+		Callable(self, "_boss3_time_bubble")
 	]
 
 	var nonspell_2_pool: Array[Callable] = [
 		Callable(self, "_boss3_super_shoot"),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-5.png", 9, 10.0, 2, 0.7),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-6.png", 7.5, 24, 18.0, 0.04, 2, 34.0, false),
-		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-5.png", 24, 6.0, 2, 0.75),
-		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-6.png", 11.0, 5, 18.0, 4, 0.18)
+		Callable(self, "_boss3_coin_barrage"),
+		Callable(self, "_boss3_time_lock_ring"),
+		Callable(self, "_boss3_set_gold"),
+		Callable(self, "_boss3_cut_body"),
+		Callable(self, "_boss3_golden_storm")
 	]
 
 	var spell_2_pool: Array[Callable] = [
 		Callable(self, "_boss3_time_bubble"),
 		Callable(self, "_boss3_time_stop"),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-6.png", 7.2, 26, 20.0, 0.04, 3, 46.0, true),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-5.png", 28, 7.2, 180.0, 2, 0.7),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-5.png", 10, 11.0, 2, 0.65)
+		Callable(self, "_boss3_time_lock_ring"),
+		Callable(self, "_boss3_golden_storm"),
+		Callable(self, "_boss3_coin_barrage")
 	]
 
 	var final_pool: Array[Callable] = [
 		Callable(self, "_boss3_coin_barrage"),
 		Callable(self, "_boss3_time_bubble"),
 		Callable(self, "_boss3_cut_body"),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-6.png", 16, 7.5, 14.5, 2, 0.45, 100.0, 65.0),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-5.png", 32, 7.8, 210.0, 2, 0.65),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-5.png", 11, 11.5, 2, 0.6)
+		Callable(self, "_boss3_time_stop"),
+		Callable(self, "_boss3_time_lock_ring"),
+		Callable(self, "_boss3_golden_storm")
 	]
 	return [
 		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
@@ -1133,33 +1334,33 @@ func _build_boss4_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var nonspell_1_pool: Array[Callable] = [
 		Callable(self, "_boss4_light_shoot"),
 		Callable(self, "_boss4_light_single"),
-		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-10.png", 10.0, 7, 22.0, 3, 0.2),
-		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-10.png", 22, 6.5, 2, 0.55),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-10.png", 7.2, 22, 16.0, 0.045, 2, 28.0, false)
+		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_side_shoot"),
+		Callable(self, "_boss4_summon_ufo")
 	]
 
 	var spell_1_pool: Array[Callable] = [
 		Callable(self, "_boss4_drag_shoot"),
 		Callable(self, "_boss4_summon_ufo"),
 		Callable(self, "_boss4_screen_static"),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-10.png", 9, 10.0, 2, 0.7),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-10.png", 26, 7.0, 140.0, 2, 0.65)
+		Callable(self, "_boss4_orbital_strike"),
+		Callable(self, "_boss4_pixel_storm")
 	]
 
 	var nonspell_2_pool: Array[Callable] = [
 		Callable(self, "_boss4_side_shoot"),
 		Callable(self, "_boss4_light_shoot"),
 		Callable(self, "_boss4_summon_ufo"),
-		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-10.png", 11.0, 5, 18.0, 4, 0.18),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-10.png", 7.8, 24, 18.0, 0.04, 2, 34.0, true)
+		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_light_single")
 	]
 
 	var spell_2_pool: Array[Callable] = [
 		Callable(self, "_boss4_pixel_storm"),
 		Callable(self, "_boss4_screen_static"),
 		Callable(self, "_boss4_orbital_strike"),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-10.png", 14, 7.0, 14.0, 2, 0.48, 95.0, 60.0),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-10.png", 10, 11.0, 2, 0.65)
+		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_side_shoot")
 	]
 
 	var final_pool: Array[Callable] = [
@@ -1167,9 +1368,9 @@ func _build_boss4_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss4_pixel_storm"),
 		Callable(self, "_boss4_summon_ufo"),
 		Callable(self, "_boss4_screen_static"),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-10.png", 32, 7.8, 210.0, 2, 0.65),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-10.png", 11, 11.5, 2, 0.6),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-10.png", 18, 7.5, 15.0, 2, 0.42, 100.0, 70.0)
+		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_side_shoot"),
+		Callable(self, "_boss4_light_shoot")
 	]
 	return [
 		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
@@ -1184,33 +1385,33 @@ func _build_boss5_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var nonspell_1_pool: Array[Callable] = [
 		Callable(self, "_boss5_throw_tnt"),
 		Callable(self, "_boss5_jump_shoot"),
-		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-11.png", 9.0, 7, 24.0, 3, 0.2),
-		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-11.png", 22, 6.2, 2, 0.55),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-11.png", 9, 10.0, 2, 0.7)
+		Callable(self, "_boss5_chain_explosion"),
+		Callable(self, "_boss5_gravity_sink"),
+		Callable(self, "_boss5_mirror_tnt")
 	]
 
 	var spell_1_pool: Array[Callable] = [
 		Callable(self, "_boss5_gravity_sink"),
 		Callable(self, "_boss5_chain_explosion"),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-11.png", 26, 7.0, 150.0, 2, 0.65),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-11.png", 14, 7.0, 14.0, 2, 0.48, 98.0, 60.0),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-11.png", 7.0, 22, 16.0, 0.045, 2, 30.0, true)
+		Callable(self, "_boss5_heal_mode"),
+		Callable(self, "_boss5_mirror_tnt"),
+		Callable(self, "_boss5_throw_tnt")
 	]
 
 	var nonspell_2_pool: Array[Callable] = [
 		Callable(self, "_boss5_jump_shoot"),
 		Callable(self, "_boss5_throw_tnt"),
-		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-11.png", 10.0, 5, 18.0, 4, 0.18),
-		Callable(self, "_pattern_spiral_stream").bind("res://assets/sprites/bossbullut-11.png", 7.8, 24, 18.0, 0.04, 2, 34.0, false),
-		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-11.png", 26, 6.5, 2, 0.7)
+		Callable(self, "_boss5_chain_explosion"),
+		Callable(self, "_boss5_gravity_sink"),
+		Callable(self, "_boss5_heal_mode")
 	]
 
 	var spell_2_pool: Array[Callable] = [
 		Callable(self, "_boss5_chain_explosion"),
 		Callable(self, "_boss5_heal_mode"),
 		Callable(self, "_boss5_gravity_sink"),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-11.png", 10, 11.0, 2, 0.65),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-11.png", 30, 7.5, 190.0, 2, 0.65)
+		Callable(self, "_boss5_mirror_tnt"),
+		Callable(self, "_boss5_throw_tnt")
 	]
 
 	var final_pool: Array[Callable] = [
@@ -1218,9 +1419,9 @@ func _build_boss5_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss5_chain_explosion"),
 		Callable(self, "_boss5_gravity_sink"),
 		Callable(self, "_boss5_heal_mode"),
-		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-11.png", 11, 11.5, 2, 0.6),
-		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-11.png", 18, 7.5, 15.0, 2, 0.42, 100.0, 70.0),
-		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-11.png", 34, 8.0, 220.0, 2, 0.6)
+		Callable(self, "_boss5_throw_tnt"),
+		Callable(self, "_boss5_jump_shoot"),
+		Callable(self, "_boss5_gravity_sink")
 	]
 	return [
 		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
@@ -1861,9 +2062,12 @@ func _boss1_black_hole() -> void:
 		return
 
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	var hole_pos := Vector2(
 		randf_range(300.0, maxf(300.0, viewport_size.x - 300.0)),
-		randf_range(200.0, maxf(200.0, viewport_size.y - 200.0))
+		randf_range(200.0, maxf(200.0, playfield_bottom - 200.0))
 	)
 
 	# Visual hole marker (uses EnemyBullet scene but with collision disabled).
@@ -1970,6 +2174,9 @@ func _boss1_portal_spawn_loop(portal: Enemy) -> void:
 		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
 			await get_tree().create_timer(0.1).timeout
 
+		if not is_instance_valid(portal) or not portal.is_inside_tree() or not get_parent():
+			return
+
 		var minion := enemy_scene_ref.instantiate() as Enemy
 		if minion:
 			# Python SummonEnemies uses rint -1/-2; we map to FAST/TANK visuals.
@@ -2025,6 +2232,9 @@ func _boss1_shoot_aside() -> void:
 func _boss1_lightning_chain() -> void:
 	# Python: 8 lightning strikes with a 0.5s warning.
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	for _i in range(8):
 		if not is_instance_valid(self) or not get_parent():
 			return
@@ -2032,12 +2242,13 @@ func _boss1_lightning_chain() -> void:
 			await get_tree().create_timer(0.1).timeout
 
 		var x_pos := randf_range(0.0, maxf(0.0, viewport_size.x - 50.0))
-		var warning := _spawn_rect_hazard(Vector2(x_pos, 0.0), Vector2(50.0, viewport_size.y), Color(1, 1, 0), 0.4, 0, true)
-		await get_tree().create_timer(0.5).timeout
+		var warning := _spawn_rect_hazard(Vector2(x_pos, 0.0), Vector2(50.0, playfield_bottom), Color(1, 1, 0), 0.4, 0, true)
+		# Slightly longer telegraph to leave reaction time (more Touhou-like).
+		await get_tree().create_timer(0.8).timeout
 		if is_instance_valid(warning):
 			warning.queue_free()
 
-		var lightning := _spawn_rect_hazard(Vector2(x_pos, 0.0), Vector2(50.0, viewport_size.y), Color(1, 1, 0.4), 1.0, randi_range(8, 9), false)
+		var lightning := _spawn_rect_hazard(Vector2(x_pos, 0.0), Vector2(50.0, playfield_bottom), Color(1, 1, 0.4), 1.0, randi_range(8, 9), false)
 		if lightning:
 			var sprite := lightning.get_node_or_null("Sprite2D") as Sprite2D
 			for alpha in range(255, 0, -30):
@@ -2133,7 +2344,7 @@ func _spawn_bullet_at(
 
 	bullet.global_position = spawn_pos
 	bullet.direction = dir.normalized() if dir.length() > 0.0 else Vector2.LEFT
-	bullet.speed = bullet_speed
+	bullet.speed = bullet_speed * clampf(boss_bullet_speed_scale, 0.05, 5.0)
 	bullet.bullet_type = bullet_type
 	bullet.tracking_enabled = false
 	bullet.damage = randi_range(8, 9)
@@ -2179,7 +2390,9 @@ func _boss2_ensure_prevent() -> void:
 		var area := Area2D.new()
 		area.name = "Prevent"
 		area.collision_layer = 4
-		area.collision_mask = 1
+		# Player (1) + player bullets (2) + enemy bullets (4).
+		# The barriers act like a "forbidden gate" and should block bullets.
+		area.collision_mask = 7
 		area.add_to_group("prevent")
 
 		var sprite := Sprite2D.new()
@@ -2195,6 +2408,19 @@ func _boss2_ensure_prevent() -> void:
 
 		# Convert Python top-left (40x120) -> centered global position.
 		area.global_position = top_left + Vector2(20.0, 60.0)
+
+		# Prevent barriers should delete most enemy bullets on contact (Python: canRemove).
+		area.area_entered.connect(func(other: Area2D) -> void:
+			if not other or not is_instance_valid(other):
+				return
+			if other is EnemyBullet:
+				var bullet := other as EnemyBullet
+				if bullet and is_instance_valid(bullet) and bullet.can_remove:
+					bullet.queue_free()
+			elif other is PlayerBullet:
+				(other as PlayerBullet).queue_free()
+		)
+
 		get_parent().add_child(area)
 		_boss2_prevent_nodes.append(area)
 
@@ -2213,6 +2439,7 @@ func _boss2_generate_love() -> void:
 		return
 
 	bullet.can_delete = false
+	bullet.can_remove = false
 	bullet.damage = randi_range(8, 9)
 
 	var sprite := bullet.get_node_or_null("Sprite2D") as Sprite2D
@@ -2248,6 +2475,7 @@ func _boss2_use_attract() -> void:
 
 	var attract := Node2D.new()
 	attract.name = "Attract"
+	attract.add_to_group("boss_hazards")
 	attract.global_position = global_position + Vector2(-50.0, 0.0)
 	get_parent().add_child(attract)
 
@@ -2339,7 +2567,9 @@ func _boss2_reverse_time() -> void:
 	# Python: reverse all enemy bullet directions.
 	var bullets: Array = get_tree().get_nodes_in_group("enemy_bullets")
 	for b in bullets:
-		if b and ("direction" in b):
+		if not b or not is_instance_valid(b):
+			continue
+		if "direction" in b:
 			b.direction = -b.direction
 	await get_tree().create_timer(2.0).timeout
 
@@ -2553,12 +2783,15 @@ func _boss3_time_bubble() -> void:
 		return
 
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	for _i in range(4):
 		if not is_instance_valid(self) or not get_parent():
 			return
 
 		var bubble_x := randf_range(200.0, maxf(200.0, viewport_size.x - 200.0))
-		var bubble_y := randf_range(150.0, maxf(150.0, viewport_size.y - 150.0))
+		var bubble_y := randf_range(150.0, maxf(150.0, playfield_bottom - 150.0))
 		_spawn_slow_bubble(Vector2(bubble_x, bubble_y), 75.0, 4.0, 2.0 * 60.0)
 		await get_tree().create_timer(1.5).timeout
 
@@ -2697,7 +2930,10 @@ func _boss4_light_shoot() -> void:
 
 func _boss4_light_single() -> void:
 	var viewport_size := get_viewport_rect().size
-	var y := randf_range(80.0, maxf(80.0, viewport_size.y - 80.0))
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	var y := randf_range(80.0, maxf(80.0, playfield_bottom - 80.0))
 	var warn_pos := Vector2(randf_range(150.0, maxf(150.0, viewport_size.x - 30.0)), y)
 	var warning := _spawn_icon_hazard(warn_pos, "res://assets/sprites/error.png", 0, true)
 
@@ -2754,7 +2990,8 @@ func _boss4_drag_shoot() -> void:
 		var dir := (player.global_position - global_position)
 		if dir.length() == 0.0:
 			dir = Vector2.LEFT
-		var bullet := _spawn_bullet_at(global_position, dir, sqrt(130.0) * 60.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-10.png")
+		# Leave reaction time: still fast, but not instant.
+		var bullet := _spawn_bullet_at(global_position, dir, sqrt(70.0) * 60.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-10.png")
 		if bullet:
 			bullet.turn_rate = (-6.0 if randf() < 0.5 else 6.0)
 			bullet.ban_remove = true
@@ -2839,7 +3076,7 @@ func _boss4_side_shoot() -> void:
 	await get_tree().create_timer(0.5).timeout
 
 	# Fire 25 bursts (0.1s), 4 bullets each.
-	var bullet_speed := 19.0 * 60.0
+	var bullet_speed := 11.5 * 60.0
 	for _i in range(25):
 		if not is_instance_valid(self) or not get_parent():
 			return
@@ -2861,6 +3098,9 @@ func _boss4_side_shoot() -> void:
 func _boss4_screen_static() -> void:
 	# Python: 3 static interference screens that slow the player and deal damage.
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	for _i in range(3):
 		if not is_instance_valid(self) or not get_parent():
 			return
@@ -2869,7 +3109,7 @@ func _boss4_screen_static() -> void:
 
 		var top_left := Vector2(
 			randf_range(200.0, maxf(200.0, viewport_size.x - 350.0)),
-			randf_range(100.0, maxf(100.0, viewport_size.y - 250.0))
+			randf_range(100.0, maxf(100.0, playfield_bottom - 250.0))
 		)
 		var hazard := _spawn_textured_rect_hazard(top_left, Vector2(150.0, 150.0), "res://assets/sprites/error.png", 5, false, 0.7)
 		if hazard:
@@ -2987,6 +3227,9 @@ func _boss4_pixel_storm() -> void:
 	if not player:
 		return
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 
 	var patterns: Array[Callable] = []
 	patterns.append(func(cx: float, cy: float) -> Array[Vector2]:
@@ -3017,7 +3260,7 @@ func _boss4_pixel_storm() -> void:
 
 	var pixels: Array[EnemyBullet] = []
 	for p in positions:
-		if p.x < 0.0 or p.x > viewport_size.x or p.y < 0.0 or p.y > viewport_size.y:
+		if p.x < 0.0 or p.x > viewport_size.x or p.y < 0.0 or p.y > playfield_bottom:
 			continue
 		var pixel := _spawn_bullet_at(p, Vector2.ZERO, 0.0, EnemyBullet.BulletType.NORMAL, "")
 		if not pixel:
@@ -3268,9 +3511,12 @@ func _boss5_gravity_sink() -> void:
 		return
 
 	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
 	var sink_pos := Vector2(
 		randf_range(300.0, maxf(300.0, viewport_size.x - 300.0)),
-		randf_range(250.0, maxf(250.0, viewport_size.y - 250.0))
+		randf_range(250.0, maxf(250.0, playfield_bottom - 250.0))
 	)
 
 	var sink := _spawn_bullet_at(sink_pos, Vector2.ZERO, 0.0, EnemyBullet.BulletType.NORMAL, "")

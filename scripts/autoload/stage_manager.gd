@@ -88,6 +88,13 @@ func on_boss_defeated() -> void:
 	for b in tree.get_nodes_in_group("enemy_bullets"):
 		if b and is_instance_valid(b):
 			b.queue_free()
+	# Clear slowdown zones / lingering hazards (e.g. Boss3 time bubbles).
+	for z in tree.get_nodes_in_group("slow_zone"):
+		if z and is_instance_valid(z):
+			z.queue_free()
+	for h in tree.get_nodes_in_group("boss_hazards"):
+		if h and is_instance_valid(h):
+			h.queue_free()
 	for e in tree.get_nodes_in_group("enemies"):
 		if e and is_instance_valid(e):
 			e.queue_free()
