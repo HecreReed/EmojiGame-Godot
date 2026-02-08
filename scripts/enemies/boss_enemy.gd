@@ -731,98 +731,155 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 			nonspell_pool = [
 				Callable(self, "_boss1_nonspell_step"),
 				Callable(self, "_boss1_sand_shoot"),
-				Callable(self, "_boss1_shoot_aside")
+				Callable(self, "_boss1_shoot_aside"),
+				Callable(self, "_boss1_dune_wave"),
+				Callable(self, "_boss1_mirage_burst"),
+				Callable(self, "_special_wave_wall")
 			]
 			spell1_pool = [
 				Callable(self, "_boss1_star_shoot"),
 				Callable(self, "_boss1_lightning_chain"),
-				Callable(self, "_boss1_mirror_shoot")
+				Callable(self, "_boss1_mirror_shoot"),
+				Callable(self, "_boss1_desert_storm"),
+				Callable(self, "_boss1_sandstorm_vortex"),
+				Callable(self, "_special_spiral_madness")
 			]
 			spell2_pool = [
 				Callable(self, "_boss1_black_hole"),
 				Callable(self, "_boss1_spiral_trap"),
-				Callable(self, "_boss1_lightning_chain")
+				Callable(self, "_boss1_lightning_chain"),
+				Callable(self, "_boss1_star_constellation"),
+				Callable(self, "_boss1_desert_storm"),
+				Callable(self, "_special_accelerate_burst")
 			]
 		2:
 			nonspell_pool = [
 				Callable(self, "_boss2_nonspell_step"),
 				Callable(self, "_boss2_generate_love"),
 				Callable(self, "_boss2_heart_trap"),
-				Callable(self, "_boss2_heart_orbit_dive")
+				Callable(self, "_boss2_heart_orbit_dive"),
+				Callable(self, "_boss2_love_rain"),
+				Callable(self, "_special_butterfly_swarm")
 			]
 			spell1_pool = [
 				Callable(self, "_boss2_use_attract"),
 				Callable(self, "_boss2_heart_rain"),
-				Callable(self, "_boss2_reverse_time")
+				Callable(self, "_boss2_reverse_time"),
+				Callable(self, "_boss2_love_explosion"),
+				Callable(self, "_boss2_cupid_arrows"),
+				Callable(self, "_special_homing_hell")
 			]
 			spell2_pool = [
 				Callable(self, "_boss2_split_bomb"),
 				Callable(self, "_boss2_heart_orbit_dive"),
-				Callable(self, "_boss2_use_attract")
+				Callable(self, "_boss2_use_attract"),
+				Callable(self, "_boss2_passion_spiral"),
+				Callable(self, "_boss2_heart_constellation"),
+				Callable(self, "_special_split_bomb")
 			]
 		3:
 			nonspell_pool = [
 				Callable(self, "_boss3_nonspell_step"),
 				Callable(self, "_boss3_super_shoot"),
-				Callable(self, "_boss3_time_lock_ring")
+				Callable(self, "_boss3_time_lock_ring"),
+				Callable(self, "_boss3_temporal_grid"),
+				Callable(self, "_special_decelerate_trap")
 			]
 			spell1_pool = [
 				Callable(self, "_boss3_time_stop"),
 				Callable(self, "_boss3_time_bubble"),
-				Callable(self, "_boss3_golden_storm")
+				Callable(self, "_boss3_golden_storm"),
+				Callable(self, "_boss3_time_spiral"),
+				Callable(self, "_boss3_clock_burst"),
+				Callable(self, "_special_spiral_madness")
 			]
 			spell2_pool = [
 				Callable(self, "_boss3_time_bubble"),
 				Callable(self, "_boss3_time_lock_ring"),
-				Callable(self, "_boss3_coin_barrage")
+				Callable(self, "_boss3_coin_barrage"),
+				Callable(self, "_boss3_golden_galaxy"),
+				Callable(self, "_boss3_time_freeze_pattern"),
+				Callable(self, "_special_accelerate_burst")
 			]
 		4:
 			nonspell_pool = [
 				Callable(self, "_boss4_light_single"),
 				Callable(self, "_boss4_drag_shoot"),
-				Callable(self, "_boss4_side_shoot")
+				Callable(self, "_boss4_side_shoot"),
+				Callable(self, "_boss4_pixel_burst"),
+				Callable(self, "_special_wave_wall")
 			]
 			spell1_pool = [
 				Callable(self, "_boss4_screen_static"),
 				Callable(self, "_boss4_light_shoot"),
-				Callable(self, "_boss4_orbital_strike")
+				Callable(self, "_boss4_orbital_strike"),
+				Callable(self, "_boss4_laser_cross"),
+				Callable(self, "_boss4_screen_sweep"),
+				Callable(self, "_special_laser_cross")
 			]
 			spell2_pool = [
 				Callable(self, "_boss4_pixel_storm"),
 				Callable(self, "_boss4_orbital_strike"),
-				Callable(self, "_boss4_screen_static")
+				Callable(self, "_boss4_screen_static"),
+				Callable(self, "_boss4_digital_rain"),
+				Callable(self, "_boss4_light_prism"),
+				Callable(self, "_special_bounce_chaos")
 			]
 		5:
 			nonspell_pool = [
 				Callable(self, "_boss5_throw_tnt"),
 				Callable(self, "_boss5_jump_shoot"),
-				Callable(self, "_boss5_chain_explosion")
+				Callable(self, "_boss5_chain_explosion"),
+				Callable(self, "_boss5_demolition_wave"),
+				Callable(self, "_special_accelerate_burst")
 			]
 			spell1_pool = [
 				Callable(self, "_boss5_gravity_sink"),
 				Callable(self, "_boss5_heal_mode"),
-				Callable(self, "_boss5_mirror_tnt")
+				Callable(self, "_boss5_mirror_tnt"),
+				Callable(self, "_boss5_mega_explosion"),
+				Callable(self, "_boss5_firework_show"),
+				Callable(self, "_special_split_bomb")
 			]
 			spell2_pool = [
 				Callable(self, "_boss5_chain_explosion"),
 				Callable(self, "_boss5_gravity_sink"),
-				Callable(self, "_boss5_throw_tnt")
+				Callable(self, "_boss5_throw_tnt"),
+				Callable(self, "_boss5_chain_reaction"),
+				Callable(self, "_boss5_tnt_barrage"),
+				Callable(self, "_special_bounce_chaos")
 			]
 		6:
 			nonspell_pool = [
 				Callable(self, "_boss6_phase1_fire_rain"),
 				Callable(self, "shoot_double_spiral"),
-				Callable(self, "shoot_tracking_burst")
+				Callable(self, "shoot_tracking_burst"),
+				Callable(self, "_boss6_ultimate_spiral"),
+				Callable(self, "_boss6_divine_cross"),
+				Callable(self, "_special_butterfly_swarm"),
+				Callable(self, "_special_wave_wall")
 			]
 			spell1_pool = [
 				Callable(self, "_boss6_spell1_spiral_fire"),
 				Callable(self, "shoot_pentagram"),
-				Callable(self, "shoot_chaos_pattern")
+				Callable(self, "shoot_chaos_pattern"),
+				Callable(self, "_boss6_galaxy_burst"),
+				Callable(self, "_boss6_final_judgment"),
+				Callable(self, "_special_spiral_madness"),
+				Callable(self, "_special_split_bomb"),
+				Callable(self, "_special_homing_hell")
 			]
 			spell2_pool = [
 				Callable(self, "_boss6_spell2_cross_laser"),
 				Callable(self, "shoot_ultimate_pattern"),
-				Callable(self, "shoot_dense_tracking")
+				Callable(self, "shoot_dense_tracking"),
+				Callable(self, "_boss6_chaos_dimension"),
+				Callable(self, "_boss6_eternal_spiral"),
+				Callable(self, "_boss6_apocalypse"),
+				Callable(self, "_special_laser_cross"),
+				Callable(self, "_special_accelerate_burst"),
+				Callable(self, "_special_bounce_chaos"),
+				Callable(self, "_special_ultimate_chaos")
 			]
 		_:
 			nonspell_pool = [Callable(self, "_boss1_nonspell_step")]
@@ -4098,3 +4155,602 @@ func shoot() -> void:
 			_spawn_boss_bumb("res://assets/sprites/bossbullut-1.png")
 		_:
 			_spawn_boss_bumb("res://assets/sprites/bossbullut-1.png")
+
+# ============================================================================
+# 东方Project风格的花哨弹幕模式
+# ============================================================================
+
+# 花瓣弹幕 - 环形散射
+func _danmaku_flower_pattern(bullet_count: int = 16, radius: float = 0.0, speed: float = 10.0, sprite: String = "res://assets/sprites/bossbullut-1.png") -> void:
+	var angle_step = TAU / bullet_count
+	for i in range(bullet_count):
+		var angle = angle_step * i
+		var spawn_pos = global_position
+		if radius > 0:
+			spawn_pos += Vector2(cos(angle), sin(angle)) * radius
+		_spawn_python_bullet(spawn_pos, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+
+# 螺旋弹幕
+func _danmaku_spiral(arms: int = 3, bullets_per_arm: int = 8, angle_offset: float = 0.0, speed: float = 8.0, sprite: String = "res://assets/sprites/bossbullut-3.png") -> void:
+	var angle_step = TAU / arms
+	for arm in range(arms):
+		for bullet in range(bullets_per_arm):
+			var angle = angle_step * arm + angle_offset + (bullet * 0.2)
+			_spawn_python_bullet(global_position, angle, 0, speed + bullet * 0.5, EnemyBullet.BulletType.NORMAL, sprite)
+			await get_tree().create_timer(0.05).timeout
+
+# 米字弹幕 - 8方向直线
+func _danmaku_cross_pattern(lines: int = 8, bullets_per_line: int = 5, spacing: float = 30.0, speed: float = 9.0, sprite: String = "res://assets/sprites/bossbullut-5.png") -> void:
+	var angle_step = TAU / lines
+	for i in range(lines):
+		var angle = angle_step * i
+		for j in range(bullets_per_line):
+			var offset = Vector2(cos(angle), sin(angle)) * spacing * j
+			_spawn_python_bullet(global_position + offset, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+
+# 扇形弹幕
+func _danmaku_fan(bullet_count: int = 12, spread_angle: float = PI/2, direction: float = PI/2, speed: float = 10.0, sprite: String = "res://assets/sprites/bossbullut-6.png") -> void:
+	var start_angle = direction - spread_angle / 2
+	var angle_step = spread_angle / (bullet_count - 1) if bullet_count > 1 else 0
+	for i in range(bullet_count):
+		var angle = start_angle + angle_step * i
+		_spawn_python_bullet(global_position, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+
+# 波浪墙弹幕
+func _danmaku_wave_wall(waves: int = 3, bullets_per_wave: int = 10, wave_delay: float = 0.15, speed: float = 7.0, sprite: String = "res://assets/sprites/bossbullut-10.png") -> void:
+	for wave in range(waves):
+		var angle_offset = wave * 0.3
+		for i in range(bullets_per_wave):
+			var angle = PI/2 + sin(i * 0.5 + angle_offset) * 0.5
+			var x_offset = (i - bullets_per_wave / 2.0) * 40
+			_spawn_python_bullet(global_position + Vector2(x_offset, 0), angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(wave_delay).timeout
+
+# 随机散射弹幕
+func _danmaku_random_spray(bullet_count: int = 20, speed_min: float = 6.0, speed_max: float = 12.0, sprite: String = "res://assets/sprites/bossbullut-1.png") -> void:
+	for i in range(bullet_count):
+		var angle = randf() * TAU
+		var speed = randf_range(speed_min, speed_max)
+		_spawn_python_bullet(global_position, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.03).timeout
+
+# 旋转螺旋塔
+func _danmaku_rotating_spiral_tower(rotations: int = 3, bullets_per_rotation: int = 12, rotation_speed: float = 0.3, speed: float = 8.0, sprite: String = "res://assets/sprites/bossbullut-3.png") -> void:
+	var total_bullets = rotations * bullets_per_rotation
+	var angle_step = (TAU * rotations) / total_bullets
+	for i in range(total_bullets):
+		var angle = angle_step * i
+		_spawn_python_bullet(global_position, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(rotation_speed / bullets_per_rotation).timeout
+
+# 双螺旋
+func _danmaku_double_helix(bullets: int = 20, rotation_offset: float = PI, speed: float = 9.0, sprite: String = "res://assets/sprites/bossbullut-5.png") -> void:
+	var angle_step = TAU / bullets
+	for i in range(bullets):
+		var angle1 = angle_step * i
+		var angle2 = angle1 + rotation_offset
+		_spawn_python_bullet(global_position, angle1, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		_spawn_python_bullet(global_position, angle2, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.05).timeout
+
+# 爆炸环形弹幕
+func _danmaku_explosion_ring(rings: int = 3, bullets_per_ring: int = 12, ring_delay: float = 0.2, speed_multiplier: float = 1.0, sprite: String = "res://assets/sprites/bossbullut-6.png") -> void:
+	for ring in range(rings):
+		var speed = 8.0 + ring * 2.0 * speed_multiplier
+		_danmaku_flower_pattern(bullets_per_ring, 0, speed, sprite)
+		await get_tree().create_timer(ring_delay).timeout
+
+# 五芒星弹幕
+func _danmaku_pentagram(size: float = 100.0, bullets_per_line: int = 8, speed: float = 10.0, sprite: String = "res://assets/sprites/bossbullut-10.png") -> void:
+	var points = []
+	for i in range(5):
+		var angle = (TAU / 5) * i - PI/2
+		points.append(global_position + Vector2(cos(angle), sin(angle)) * size)
+
+	for i in range(5):
+		var start = points[i]
+		var end = points[(i + 2) % 5]
+		var direction = (end - start).normalized()
+		var angle = direction.angle()
+
+		for j in range(bullets_per_line):
+			var t = float(j) / bullets_per_line
+			var pos = start.lerp(end, t)
+			_spawn_python_bullet(pos, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.1).timeout
+
+# 追踪扇形弹幕
+func _danmaku_aimed_fan(bullet_count: int = 9, spread: float = PI/3, speed: float = 11.0, sprite: String = "res://assets/sprites/bossbullut-11.png") -> void:
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+	var direction = (player.global_position - global_position).angle()
+	_danmaku_fan(bullet_count, spread, direction, speed, sprite)
+
+# 蝴蝶弹幕 - 曲线运动（使用追踪模拟）
+func _danmaku_butterfly(pairs: int = 5, speed: float = 8.0, sprite: String = "res://assets/sprites/bossbullut-3.png") -> void:
+	for i in range(pairs):
+		var angle_left = PI/2 - 0.5 + i * 0.2
+		var angle_right = PI/2 + 0.5 - i * 0.2
+		_spawn_boss_bumb(sprite, speed, false, true)
+		_spawn_boss_bumb(sprite, speed, false, true)
+		await get_tree().create_timer(0.15).timeout
+
+# 激光扫射（密集直线）
+func _danmaku_laser_sweep(start_angle: float = 0.0, end_angle: float = PI, sweep_time: float = 2.0, bullets_per_frame: int = 3, speed: float = 15.0, sprite: String = "res://assets/sprites/bossbullut-5.png") -> void:
+	var steps = int(sweep_time / 0.05)
+	var angle_step = (end_angle - start_angle) / steps
+	for i in range(steps):
+		var angle = start_angle + angle_step * i
+		for j in range(bullets_per_frame):
+			_spawn_python_bullet(global_position, angle, 0, speed + j * 2, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.05).timeout
+
+# 心形弹幕
+func _danmaku_heart(bullets: int = 30, size: float = 80.0, speed: float = 9.0, sprite: String = "res://assets/sprites/bossbullut-1.png") -> void:
+	for i in range(bullets):
+		var t = (float(i) / bullets) * TAU
+		var x = size * (16 * pow(sin(t), 3))
+		var y = -size * (13 * cos(t) - 5 * cos(2*t) - 2 * cos(3*t) - cos(4*t))
+		var pos = global_position + Vector2(x, y) / 16.0
+		var direction = (pos - global_position).normalized()
+		_spawn_python_bullet(pos, direction.angle(), 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.05).timeout
+
+# 网格弹幕
+func _danmaku_grid(rows: int = 5, cols: int = 8, spacing: float = 40.0, speed: float = 7.0, sprite: String = "res://assets/sprites/bossbullut-6.png") -> void:
+	var start_x = -(cols - 1) * spacing / 2
+	var start_y = -100
+	for row in range(rows):
+		for col in range(cols):
+			var pos = global_position + Vector2(start_x + col * spacing, start_y)
+			_spawn_python_bullet(pos, PI/2, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.2).timeout
+
+# 螺旋星爆
+func _danmaku_spiral_starburst(waves: int = 5, bullets_per_wave: int = 16, rotation_per_wave: float = 0.3, speed: float = 10.0, sprite: String = "res://assets/sprites/bossbullut-10.png") -> void:
+	for wave in range(waves):
+		var rotation = wave * rotation_per_wave
+		_danmaku_flower_pattern(bullets_per_wave, 0, speed + wave, sprite)
+		await get_tree().create_timer(0.15).timeout
+
+# 交叉激光
+func _danmaku_cross_laser(arms: int = 4, length: int = 10, speed: float = 12.0, sprite: String = "res://assets/sprites/bossbullut-5.png") -> void:
+	var angle_step = TAU / arms
+	for i in range(arms):
+		var angle = angle_step * i
+		for j in range(length):
+			var offset = Vector2(cos(angle), sin(angle)) * j * 20
+			_spawn_python_bullet(global_position + offset, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.1).timeout
+
+# 随机追踪弹雨
+func _danmaku_tracking_rain(bullet_count: int = 15, delay: float = 0.1, speed: float = 10.0, sprite: String = "res://assets/sprites/bossbullut-11.png") -> void:
+	for i in range(bullet_count):
+		var x_offset = randf_range(-200, 200)
+		_spawn_boss_bumb(sprite, speed, false, true)
+		await get_tree().create_timer(delay).timeout
+
+# 旋转方阵
+func _danmaku_rotating_square(size: float = 100.0, bullets_per_side: int = 6, rotation_speed: float = 1.0, speed: float = 8.0, sprite: String = "res://assets/sprites/bossbullut-3.png") -> void:
+	var half_size = size / 2
+	var positions = [
+		Vector2(-half_size, -half_size),
+		Vector2(half_size, -half_size),
+		Vector2(half_size, half_size),
+		Vector2(-half_size, half_size)
+	]
+
+	for side in range(4):
+		var start_pos = positions[side]
+		var end_pos = positions[(side + 1) % 4]
+		for i in range(bullets_per_side):
+			var t = float(i) / bullets_per_side
+			var pos = global_position + start_pos.lerp(end_pos, t)
+			var direction = (pos - global_position).normalized()
+			_spawn_python_bullet(pos, direction.angle(), 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.15).timeout
+
+# 花瓣爆发
+func _danmaku_petal_burst(layers: int = 3, petals_per_layer: int = 8, speed_base: float = 8.0, sprite: String = "res://assets/sprites/bossbullut-1.png") -> void:
+	for layer in range(layers):
+		var rotation_offset = (layer % 2) * (PI / petals_per_layer)
+		var speed = speed_base + layer * 2
+		var angle_step = TAU / petals_per_layer
+		for i in range(petals_per_layer):
+			var angle = angle_step * i + rotation_offset
+			_spawn_python_bullet(global_position, angle, 0, speed, EnemyBullet.BulletType.NORMAL, sprite)
+		await get_tree().create_timer(0.1).timeout
+
+# 螺旋追踪组合
+func _danmaku_spiral_tracking_combo(spirals: int = 2, tracking_bullets: int = 5, sprite: String = "res://assets/sprites/bossbullut-11.png") -> void:
+	for i in range(spirals):
+		_danmaku_spiral(3, 6, i * PI/3, 9.0, sprite)
+		await get_tree().create_timer(0.3).timeout
+	for i in range(tracking_bullets):
+		_spawn_boss_bumb(sprite, 11.0, false, true)
+		await get_tree().create_timer(0.15).timeout
+
+# ============================================================================
+# Boss 1 新技能 - 沙漠主题弹幕
+# ============================================================================
+
+func _boss1_desert_storm() -> void:
+	# 沙漠风暴 - 旋转螺旋塔
+	await _danmaku_rotating_spiral_tower(4, 16, 0.4, 9.0, "res://assets/sprites/bossbullut-1.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_flower_pattern(20, 0, 11.0, "res://assets/sprites/bossbullut-3.png")
+
+func _boss1_sandstorm_vortex() -> void:
+	# 沙尘漩涡 - 双螺旋
+	await _danmaku_double_helix(25, PI, 10.0, "res://assets/sprites/bossbullut-5.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_spiral_starburst(4, 12, 0.4, 9.0, "res://assets/sprites/bossbullut-1.png")
+
+func _boss1_mirage_burst() -> void:
+	# 幻影爆发 - 爆炸环形
+	await _danmaku_explosion_ring(4, 16, 0.25, 1.2, "res://assets/sprites/bossbullut-6.png")
+
+func _boss1_dune_wave() -> void:
+	# 沙丘波浪
+	await _danmaku_wave_wall(4, 12, 0.2, 8.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_aimed_fan(11, PI/2, 12.0, "res://assets/sprites/bossbullut-11.png")
+
+func _boss1_star_constellation() -> void:
+	# 星座弹幕 - 五芒星
+	await _danmaku_pentagram(120.0, 10, 11.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_flower_pattern(24, 0, 10.0, "res://assets/sprites/bossbullut-3.png")
+
+# ============================================================================
+# Boss 2 新技能 - 爱心主题弹幕
+# ============================================================================
+
+func _boss2_love_explosion() -> void:
+	# 爱的爆发 - 心形弹幕
+	await _danmaku_heart(35, 100.0, 10.0, "res://assets/sprites/bossbullut-1.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_flower_pattern(16, 0, 9.0, "res://assets/sprites/bossbullut-3.png")
+
+func _boss2_cupid_arrows() -> void:
+	# 丘比特之箭 - 追踪扇形
+	for i in range(3):
+		await _danmaku_aimed_fan(7, PI/4, 13.0, "res://assets/sprites/bossbullut-11.png")
+		await get_tree().create_timer(0.4).timeout
+
+func _boss2_passion_spiral() -> void:
+	# 激情螺旋
+	await _danmaku_spiral_tracking_combo(3, 8, "res://assets/sprites/bossbullut-11.png")
+
+func _boss2_heart_constellation() -> void:
+	# 心之星座 - 五芒星+心形
+	await _danmaku_pentagram(100.0, 8, 10.0, "res://assets/sprites/bossbullut-6.png")
+	await get_tree().create_timer(0.5).timeout
+	await _danmaku_heart(30, 90.0, 9.0, "res://assets/sprites/bossbullut-1.png")
+
+func _boss2_love_rain() -> void:
+	# 爱之雨 - 追踪弹雨
+	await _danmaku_tracking_rain(20, 0.12, 11.0, "res://assets/sprites/bossbullut-11.png")
+
+# ============================================================================
+# Boss 3 新技能 - 时间主题弹幕
+# ============================================================================
+
+func _boss3_time_spiral() -> void:
+	# 时间螺旋
+	await _danmaku_rotating_spiral_tower(5, 14, 0.35, 10.0, "res://assets/sprites/bossbullut-3.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_double_helix(20, PI, 11.0, "res://assets/sprites/bossbullut-5.png")
+
+func _boss3_clock_burst() -> void:
+	# 时钟爆发 - 米字弹幕
+	await _danmaku_cross_pattern(12, 6, 35.0, 10.0, "res://assets/sprites/bossbullut-5.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_flower_pattern(24, 0, 9.0, "res://assets/sprites/bossbullut-10.png")
+
+func _boss3_temporal_grid() -> void:
+	# 时空网格
+	await _danmaku_grid(6, 10, 45.0, 8.0, "res://assets/sprites/bossbullut-6.png")
+
+func _boss3_golden_galaxy() -> void:
+	# 黄金银河 - 螺旋星爆
+	await _danmaku_spiral_starburst(6, 20, 0.35, 11.0, "res://assets/sprites/bossbullut-10.png")
+
+func _boss3_time_freeze_pattern() -> void:
+	# 时间冻结模式 - 旋转方阵
+	await _danmaku_rotating_square(120.0, 8, 1.0, 9.0, "res://assets/sprites/bossbullut-3.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_explosion_ring(3, 16, 0.2, 1.0, "res://assets/sprites/bossbullut-6.png")
+
+# ============================================================================
+# Boss 4 新技能 - 光/像素主题弹幕
+# ============================================================================
+
+func _boss4_pixel_burst() -> void:
+	# 像素爆发 - 随机散射
+	await _danmaku_random_spray(30, 7.0, 14.0, "res://assets/sprites/bossbullut-1.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_flower_pattern(16, 0, 10.0, "res://assets/sprites/bossbullut-5.png")
+
+func _boss4_laser_cross() -> void:
+	# 激光十字 - 交叉激光
+	await _danmaku_cross_laser(8, 12, 13.0, "res://assets/sprites/bossbullut-5.png")
+
+func _boss4_screen_sweep() -> void:
+	# 屏幕扫射 - 激光扫射
+	await _danmaku_laser_sweep(0.0, PI, 2.5, 4, 16.0, "res://assets/sprites/bossbullut-5.png")
+
+func _boss4_digital_rain() -> void:
+	# 数字雨 - 网格+追踪
+	await _danmaku_grid(5, 9, 40.0, 9.0, "res://assets/sprites/bossbullut-6.png")
+	await get_tree().create_timer(0.5).timeout
+	await _danmaku_tracking_rain(12, 0.1, 12.0, "res://assets/sprites/bossbullut-11.png")
+
+func _boss4_light_prism() -> void:
+	# 光棱镜 - 扇形+螺旋
+	await _danmaku_aimed_fan(13, PI/2.5, 12.0, "res://assets/sprites/bossbullut-11.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_spiral(4, 8, 0.0, 10.0, "res://assets/sprites/bossbullut-3.png")
+
+# ============================================================================
+# Boss 5 新技能 - 爆炸主题弹幕
+# ============================================================================
+
+func _boss5_mega_explosion() -> void:
+	# 超级爆炸 - 爆炸环形
+	await _danmaku_explosion_ring(5, 18, 0.18, 1.3, "res://assets/sprites/bossbullut-6.png")
+
+func _boss5_firework_show() -> void:
+	# 烟花秀 - 花瓣爆发
+	await _danmaku_petal_burst(4, 12, 9.0, "res://assets/sprites/bossbullut-1.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_random_spray(25, 8.0, 13.0, "res://assets/sprites/bossbullut-3.png")
+
+func _boss5_chain_reaction() -> void:
+	# 连锁反应 - 螺旋星爆
+	await _danmaku_spiral_starburst(5, 16, 0.4, 10.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_flower_pattern(20, 0, 11.0, "res://assets/sprites/bossbullut-6.png")
+
+func _boss5_tnt_barrage() -> void:
+	# TNT弹幕 - 网格+爆炸
+	await _danmaku_grid(4, 8, 50.0, 8.0, "res://assets/sprites/bossbullut-6.png")
+	await get_tree().create_timer(0.4).timeout
+	await _danmaku_explosion_ring(3, 14, 0.2, 1.1, "res://assets/sprites/bossbullut-10.png")
+
+func _boss5_demolition_wave() -> void:
+	# 爆破波 - 波浪墙
+	await _danmaku_wave_wall(5, 11, 0.18, 9.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_aimed_fan(9, PI/3, 13.0, "res://assets/sprites/bossbullut-11.png")
+
+# ============================================================================
+# Boss 6 新技能 - 终极主题弹幕
+# ============================================================================
+
+func _boss6_ultimate_spiral() -> void:
+	# 终极螺旋 - 双螺旋+螺旋塔
+	await _danmaku_double_helix(30, PI, 11.0, "res://assets/sprites/bossbullut-5.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_rotating_spiral_tower(5, 18, 0.3, 10.0, "res://assets/sprites/bossbullut-3.png")
+
+func _boss6_galaxy_burst() -> void:
+	# 银河爆发 - 螺旋星爆+五芒星
+	await _danmaku_spiral_starburst(6, 20, 0.3, 12.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.4).timeout
+	await _danmaku_pentagram(130.0, 12, 11.0, "res://assets/sprites/bossbullut-10.png")
+
+func _boss6_final_judgment() -> void:
+	# 最终审判 - 激光扫射+追踪雨
+	await _danmaku_laser_sweep(0.0, TAU, 3.0, 5, 17.0, "res://assets/sprites/bossbullut-5.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_tracking_rain(25, 0.08, 13.0, "res://assets/sprites/bossbullut-11.png")
+
+func _boss6_chaos_dimension() -> void:
+	# 混沌次元 - 随机散射+网格+爆炸环
+	await _danmaku_random_spray(35, 6.0, 15.0, "res://assets/sprites/bossbullut-1.png")
+	await get_tree().create_timer(0.4).timeout
+	await _danmaku_grid(6, 10, 40.0, 9.0, "res://assets/sprites/bossbullut-6.png")
+	await get_tree().create_timer(0.4).timeout
+	await _danmaku_explosion_ring(4, 20, 0.2, 1.4, "res://assets/sprites/bossbullut-10.png")
+
+func _boss6_divine_cross() -> void:
+	# 神圣十字 - 交叉激光+米字弹幕
+	await _danmaku_cross_laser(12, 15, 14.0, "res://assets/sprites/bossbullut-5.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_cross_pattern(16, 8, 30.0, 11.0, "res://assets/sprites/bossbullut-5.png")
+
+func _boss6_eternal_spiral() -> void:
+	# 永恒螺旋 - 螺旋追踪组合
+	await _danmaku_spiral_tracking_combo(4, 12, "res://assets/sprites/bossbullut-11.png")
+	await get_tree().create_timer(0.3).timeout
+	await _danmaku_rotating_square(140.0, 10, 1.2, 10.0, "res://assets/sprites/bossbullut-3.png")
+
+func _boss6_apocalypse() -> void:
+	# 天启 - 所有模式组合
+	await _danmaku_flower_pattern(24, 0, 12.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_heart(25, 80.0, 11.0, "res://assets/sprites/bossbullut-1.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_pentagram(110.0, 10, 12.0, "res://assets/sprites/bossbullut-10.png")
+	await get_tree().create_timer(0.2).timeout
+	await _danmaku_explosion_ring(5, 20, 0.15, 1.5, "res://assets/sprites/bossbullut-6.png")
+
+# ============================================================================
+# 特殊子弹类型技能
+# ============================================================================
+
+func _special_butterfly_swarm() -> void:
+	# 蝴蝶弹群
+	for i in range(12):
+		var angle = (TAU / 12) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 150.0
+		bullet.bullet_type = EnemyBullet.BulletType.BUTTERFLY
+		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+		get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.1).timeout
+
+func _special_laser_cross() -> void:
+	# 激光十字
+	var directions = [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]
+	for dir in directions:
+		for i in range(8):
+			var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position + dir * i * 30
+			bullet.direction = dir
+			bullet.speed = 300.0
+			bullet.bullet_type = EnemyBullet.BulletType.LASER
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.15).timeout
+
+func _special_split_bomb() -> void:
+	# 分裂弹幕
+	for i in range(8):
+		var angle = (TAU / 8) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 180.0
+		bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_tree().root.add_child(bullet)
+	await get_tree().create_timer(1.5).timeout
+
+func _special_spiral_madness() -> void:
+	# 螺旋狂舞
+	for i in range(16):
+		var angle = (TAU / 16) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 120.0
+		bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+		get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.08).timeout
+
+func _special_homing_hell() -> void:
+	# 追踪地狱
+	for i in range(15):
+		var angle = randf() * TAU
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 100.0
+		bullet.bullet_type = EnemyBullet.BulletType.HOMING
+		bullet._homing_strength = 3.0
+		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+		get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.15).timeout
+
+func _special_wave_wall() -> void:
+	# 波浪墙
+	for wave in range(3):
+		for i in range(10):
+			var x_offset = (i - 5) * 50
+			var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position + Vector2(x_offset, -100)
+			bullet.direction = Vector2.DOWN
+			bullet.speed = 150.0
+			bullet.bullet_type = EnemyBullet.BulletType.WAVE_SINE if wave % 2 == 0 else EnemyBullet.BulletType.WAVE_COS
+			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.3).timeout
+
+func _special_accelerate_burst() -> void:
+	# 加速爆发
+	for i in range(12):
+		var angle = (TAU / 12) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 50.0
+		bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
+		bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+		get_tree().root.add_child(bullet)
+	await get_tree().create_timer(0.5).timeout
+
+func _special_decelerate_trap() -> void:
+	# 减速陷阱
+	for i in range(16):
+		var angle = (TAU / 16) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 250.0
+		bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_tree().root.add_child(bullet)
+	await get_tree().create_timer(0.5).timeout
+
+func _special_bounce_chaos() -> void:
+	# 弹跳混沌
+	for i in range(20):
+		var angle = randf() * TAU
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 200.0
+		bullet.bullet_type = EnemyBullet.BulletType.BOUNCE
+		bullet.can_return = true
+		bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+		get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.1).timeout
+
+func _special_ultimate_chaos() -> void:
+	# 终极混沌 - 所有特殊子弹类型组合
+	# 蝴蝶弹
+	for i in range(6):
+		var angle = (TAU / 6) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 150.0
+		bullet.bullet_type = EnemyBullet.BulletType.BUTTERFLY
+		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+		get_tree().root.add_child(bullet)
+
+	await get_tree().create_timer(0.3).timeout
+
+	# 螺旋弹
+	for i in range(8):
+		var angle = (TAU / 8) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 120.0
+		bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+		bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+		get_tree().root.add_child(bullet)
+
+	await get_tree().create_timer(0.3).timeout
+
+	# 追踪弹
+	for i in range(5):
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
+		bullet.speed = 100.0
+		bullet.bullet_type = EnemyBullet.BulletType.HOMING
+		bullet._homing_strength = 4.0
+		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+		get_tree().root.add_child(bullet)
+		await get_tree().create_timer(0.2).timeout
+
+	await get_tree().create_timer(0.3).timeout
+
+	# 分裂弹
+	for i in range(6):
+		var angle = (TAU / 6) * i
+		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 180.0
+		bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_tree().root.add_child(bullet)

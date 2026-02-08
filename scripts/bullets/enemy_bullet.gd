@@ -6,7 +6,17 @@ enum BulletType {
 	TRACKING,    # 朝向玩家（默认锁定一次；需要时可开启真追踪）
 	CIRCLE,      # 圆形弹幕
 	SAND,        # 散射
-	RANDOM       # 随机方向
+	RANDOM,      # 随机方向
+	BUTTERFLY,   # 蝴蝶弹 - 正弦波曲线运动
+	LASER,       # 激光 - 超高速直线
+	SPIRAL,      # 螺旋弹 - 持续旋转方向
+	SPLIT,       # 分裂弹 - 飞行一段时间后分裂
+	ACCELERATE,  # 加速弹 - 持续加速
+	DECELERATE,  # 减速弹 - 持续减速后停止
+	BOUNCE,      # 弹跳弹 - 碰墙反弹
+	HOMING,      # 追踪弹 - 持续追踪玩家
+	WAVE_SINE,   # 正弦波弹
+	WAVE_COS     # 余弦波弹
 }
 
 @export var speed: float = 400.0
@@ -36,6 +46,10 @@ var rotation_angle: float = 0.0
 var is_blown_away: bool = false
 var _was_time_stop_active: bool = false
 var _wave_time: float = 0.0
+var _lifetime: float = 0.0  # 用于分裂弹等需要计时的类型
+var _split_triggered: bool = false  # 分裂弹是否已分裂
+var _butterfly_time: float = 0.0  # 蝴蝶弹计时器
+var _homing_strength: float = 2.0  # 追踪强度
 
 # Orbit (Touhou-like gimmick): keep the bullet circling for a while, then optionally dash.
 var orbit_center: Vector2 = Vector2.ZERO
@@ -73,21 +87,88 @@ func _physics_process(delta):
 				speed = dash_speed
 				dash_after_orbit = false
 		else:
-			if tracking_enabled and bullet_type == BulletType.TRACKING:
-				# 真·追踪（Boss2等需要）
-				aim_at_player()
+			_lifetime += delta
 
-			if turn_rate != 0.0 and direction.length() > 0.0:
-				direction = direction.rotated(turn_rate * delta).normalized()
+			# 处理特殊子弹类型
+			match bullet_type:
+				BulletType.BUTTERFLY:
+					_butterfly_time += delta
+					var perp := Vector2(-direction.y, direction.x).normalized()
+					var wave_offset := sin(_butterfly_time * 5.0) * 50.0
+					position += direction * speed * delta + perp * wave_offset * delta
 
-			if acceleration != 0.0:
-				speed = maxf(0.0, speed + acceleration * delta)
+				BulletType.LASER:
+					# 激光 - 超高速
+					position += direction * speed * 2.0 * delta
 
-			position += direction * speed * delta
-			_apply_wave(delta)
+				BulletType.SPIRAL:
+					# 螺旋弹 - 持续旋转
+					direction = direction.rotated(3.0 * delta).normalized()
+					position += direction * speed * delta
 
-			if can_return:
-				_apply_wall_bounce()
+				BulletType.SPLIT:
+					# 分裂弹 - 1秒后分裂成3个
+					if _lifetime > 1.0 and not _split_triggered:
+						_split_triggered = true
+						_spawn_split_bullets()
+						queue_free()
+					else:
+						position += direction * speed * delta
+
+				BulletType.ACCELERATE:
+					# 加速弹
+					speed += 100.0 * delta
+					position += direction * speed * delta
+
+				BulletType.DECELERATE:
+					# 减速弹
+					speed = maxf(0.0, speed - 150.0 * delta)
+					position += direction * speed * delta
+
+				BulletType.BOUNCE:
+					# 弹跳弹
+					position += direction * speed * delta
+					_apply_wall_bounce()
+
+				BulletType.HOMING:
+					# 追踪弹 - 持续追踪
+					var player := get_tree().get_first_node_in_group("player") as Node2D
+					if player and is_instance_valid(player):
+						var to_player := (player.global_position - global_position).normalized()
+						direction = direction.lerp(to_player, _homing_strength * delta).normalized()
+					position += direction * speed * delta
+
+				BulletType.WAVE_SINE:
+					# 正弦波弹
+					_wave_time += delta
+					var perp := Vector2(-direction.y, direction.x).normalized()
+					var wave_offset := sin(_wave_time * 4.0) * 30.0
+					position += direction * speed * delta + perp * wave_offset * delta
+
+				BulletType.WAVE_COS:
+					# 余弦波弹
+					_wave_time += delta
+					var perp := Vector2(-direction.y, direction.x).normalized()
+					var wave_offset := cos(_wave_time * 4.0) * 30.0
+					position += direction * speed * delta + perp * wave_offset * delta
+
+				_:
+					# 默认行为（NORMAL, TRACKING等）
+					if tracking_enabled and bullet_type == BulletType.TRACKING:
+						# 真·追踪（Boss2等需要）
+						aim_at_player()
+
+					if turn_rate != 0.0 and direction.length() > 0.0:
+						direction = direction.rotated(turn_rate * delta).normalized()
+
+					if acceleration != 0.0:
+						speed = maxf(0.0, speed + acceleration * delta)
+
+					position += direction * speed * delta
+					_apply_wave(delta)
+
+					if can_return:
+						_apply_wall_bounce()
 
 	# Visual rotation
 	if rotate_with_direction and direction.length() > 0:
@@ -215,3 +296,16 @@ func _get_vertical_extent() -> float:
 		if shape is RectangleShape2D:
 			return (shape as RectangleShape2D).size.y * 0.5
 	return 8.0
+
+func _spawn_split_bullets() -> void:
+	# 分裂成3个子弹
+	var angles = [-PI/4, 0, PI/4]  # 左、中、右
+	for angle_offset in angles:
+		var new_bullet = duplicate() as EnemyBullet
+		if new_bullet:
+			new_bullet.global_position = global_position
+			new_bullet.direction = direction.rotated(angle_offset).normalized()
+			new_bullet.bullet_type = BulletType.NORMAL  # 分裂后变成普通弹
+			new_bullet._split_triggered = true  # 防止再次分裂
+			new_bullet.speed = speed * 0.8
+			get_parent().add_child(new_bullet)
