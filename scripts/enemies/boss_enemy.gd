@@ -712,11 +712,22 @@ func _build_touhou_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 			return _build_boss1_phases(total_hp)
 
 func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
-	# Two-bar midboss: NONSPELL -> SPELL.
-	var hps := _alloc_phase_hp(total_hp, [0.56, 0.44])
+	# Midboss should be shorter than the stage boss and have at most 2 spell cards.
+	var stage := 1
+	if StageManager:
+		stage = maxi(1, int(StageManager.current_stage))
+	var spell_count := 1
+	if stage >= 4:
+		spell_count = 2
+
+	var hp_weights: Array[float] = [0.56, 0.44]
+	if spell_count >= 2:
+		hp_weights = [0.50, 0.25, 0.25]
+	var hps := _alloc_phase_hp(total_hp, hp_weights)
 
 	var nonspell_pool: Array[Callable] = []
-	var spell_pool: Array[Callable] = []
+	var spell1_pool: Array[Callable] = []
+	var spell2_pool: Array[Callable] = []
 
 	match boss_id:
 		1:
@@ -725,10 +736,15 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 				Callable(self, "_boss1_sand_shoot"),
 				Callable(self, "_boss1_shoot_aside")
 			]
-			spell_pool = [
+			spell1_pool = [
 				Callable(self, "_boss1_star_shoot"),
 				Callable(self, "_boss1_lightning_chain"),
 				Callable(self, "_boss1_mirror_shoot")
+			]
+			spell2_pool = [
+				Callable(self, "_boss1_black_hole"),
+				Callable(self, "_boss1_spiral_trap"),
+				Callable(self, "_boss1_lightning_chain")
 			]
 		2:
 			nonspell_pool = [
@@ -737,10 +753,15 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 				Callable(self, "_boss2_heart_trap"),
 				Callable(self, "_boss2_heart_orbit_dive")
 			]
-			spell_pool = [
+			spell1_pool = [
 				Callable(self, "_boss2_use_attract"),
 				Callable(self, "_boss2_heart_rain"),
 				Callable(self, "_boss2_reverse_time")
+			]
+			spell2_pool = [
+				Callable(self, "_boss2_split_bomb"),
+				Callable(self, "_boss2_heart_orbit_dive"),
+				Callable(self, "_boss2_use_attract")
 			]
 		3:
 			nonspell_pool = [
@@ -748,10 +769,15 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 				Callable(self, "_boss3_super_shoot"),
 				Callable(self, "_boss3_time_lock_ring")
 			]
-			spell_pool = [
+			spell1_pool = [
 				Callable(self, "_boss3_time_stop"),
 				Callable(self, "_boss3_time_bubble"),
 				Callable(self, "_boss3_golden_storm")
+			]
+			spell2_pool = [
+				Callable(self, "_boss3_time_bubble"),
+				Callable(self, "_boss3_time_lock_ring"),
+				Callable(self, "_boss3_coin_barrage")
 			]
 		4:
 			nonspell_pool = [
@@ -759,10 +785,15 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 				Callable(self, "_boss4_drag_shoot"),
 				Callable(self, "_boss4_side_shoot")
 			]
-			spell_pool = [
+			spell1_pool = [
 				Callable(self, "_boss4_screen_static"),
 				Callable(self, "_boss4_light_shoot"),
 				Callable(self, "_boss4_orbital_strike")
+			]
+			spell2_pool = [
+				Callable(self, "_boss4_pixel_storm"),
+				Callable(self, "_boss4_orbital_strike"),
+				Callable(self, "_boss4_screen_static")
 			]
 		5:
 			nonspell_pool = [
@@ -770,10 +801,15 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 				Callable(self, "_boss5_jump_shoot"),
 				Callable(self, "_boss5_chain_explosion")
 			]
-			spell_pool = [
+			spell1_pool = [
 				Callable(self, "_boss5_gravity_sink"),
 				Callable(self, "_boss5_heal_mode"),
 				Callable(self, "_boss5_mirror_tnt")
+			]
+			spell2_pool = [
+				Callable(self, "_boss5_chain_explosion"),
+				Callable(self, "_boss5_gravity_sink"),
+				Callable(self, "_boss5_throw_tnt")
 			]
 		6:
 			nonspell_pool = [
@@ -781,19 +817,34 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 				Callable(self, "shoot_double_spiral"),
 				Callable(self, "shoot_tracking_burst")
 			]
-			spell_pool = [
+			spell1_pool = [
 				Callable(self, "_boss6_spell1_spiral_fire"),
 				Callable(self, "shoot_pentagram"),
 				Callable(self, "shoot_chaos_pattern")
 			]
+			spell2_pool = [
+				Callable(self, "_boss6_spell2_cross_laser"),
+				Callable(self, "shoot_ultimate_pattern"),
+				Callable(self, "shoot_dense_tracking")
+			]
 		_:
 			nonspell_pool = [Callable(self, "_boss1_nonspell_step")]
-			spell_pool = [Callable(self, "_boss1_star_shoot")]
+			spell1_pool = [Callable(self, "_boss1_star_shoot")]
+			spell2_pool = [Callable(self, "_boss1_black_hole")]
 
-	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Mid Nonspell", hps[0], 35.0, 0.65, 0.50, 0.9, nonspell_pool[0], nonspell_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Mid Spell", hps[1], 45.0, 0.0, 0.40, 1.1, spell_pool[0], spell_pool)
-	]
+	if nonspell_pool.is_empty():
+		nonspell_pool = [Callable(self, "_boss1_nonspell_step")]
+	if spell1_pool.is_empty():
+		spell1_pool = [Callable(self, "_boss1_star_shoot")]
+	if spell2_pool.is_empty():
+		spell2_pool = spell1_pool
+
+	var phases: Array[BossPhaseDef] = []
+	phases.append(_make_phase_mix(PhaseKind.NONSPELL, "Mid Nonspell", hps[0], 35.0, 0.65, 0.50, 0.9, nonspell_pool[0], nonspell_pool))
+	phases.append(_make_phase_mix(PhaseKind.SPELL, "Mid Spell 1", hps[1], 45.0, 0.0, 0.40, 1.1, spell1_pool[0], spell1_pool))
+	if spell_count >= 2 and hps.size() >= 3:
+		phases.append(_make_phase_mix(PhaseKind.SPELL, "Mid Spell 2", hps[2], 48.0, 0.0, 0.38, 1.2, spell2_pool[0], spell2_pool, PatternPoolMode.CYCLE))
+	return phases
 
 func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var hps := _alloc_phase_hp(total_hp, [0.18, 0.20, 0.18, 0.20, 0.24])
@@ -801,6 +852,7 @@ func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var nonspell_1_pool: Array[Callable] = [
 		Callable(self, "_boss1_nonspell_step"),
 		Callable(self, "_boss1_sand_shoot"),
+		Callable(self, "_boss1_sand_snakes"),
 		Callable(self, "_boss1_shoot_aside"),
 		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-1.png", 8.5, 7, 30.0, 3, 0.25),
 		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-2.png", 16, 6.5, 2, 0.4),
@@ -819,6 +871,7 @@ func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss1_spiral_trap"),
 		Callable(self, "_boss1_summon_teleport"),
 		Callable(self, "_boss1_sand_shoot"),
+		Callable(self, "_boss1_sand_snakes"),
 		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-2.png", 7, 9.0, 2, 0.7),
 		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-1.png", 10, 7.0, 11.0, 2, 0.55, 90.0, 40.0)
 	]
@@ -834,17 +887,18 @@ func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var final_pool: Array[Callable] = [
 		Callable(self, "_boss1_black_hole"),
 		Callable(self, "_boss1_spiral_trap"),
+		Callable(self, "_boss1_sand_snakes"),
 		Callable(self, "_boss1_lightning_chain"),
 		Callable(self, "_pattern_curving_ring").bind("res://assets/sprites/bossbullut-3.png", 26, 6.8, 140.0, 2, 0.7),
 		Callable(self, "_pattern_lane_wall").bind("res://assets/sprites/bossbullut-2.png", 9, 10.0, 2, 0.65),
 		Callable(self, "_pattern_random_rain").bind("res://assets/sprites/bossbullut-1.png", 14, 7.0, 13.0, 2, 0.5, 110.0, 55.0)
 	]
 	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 38.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 1", hps[1], 55.0, 0.0, 0.35, 1.2, spell_1_pool[0], spell_1_pool),
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 2", hps[2], 38.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 2", hps[3], 60.0, 0.0, 0.35, 1.2, spell_2_pool[0], spell_2_pool),
-		_make_phase_mix(PhaseKind.FINAL, "Final Spell", hps[4], 70.0, 0.45, 0.30, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
+		_make_phase_mix(PhaseKind.NONSPELL, "Sandstorm Prelude", hps[0], 38.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Chain Lightning", hps[1], 55.0, 0.0, 0.35, 1.2, spell_1_pool[0], spell_1_pool),
+		_make_phase_mix(PhaseKind.NONSPELL, "Mirage Snakes", hps[2], 38.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Singularity Pull", hps[3], 60.0, 0.0, 0.35, 1.2, spell_2_pool[0], spell_2_pool),
+		_make_phase_mix(PhaseKind.FINAL, "Event Horizon", hps[4], 70.0, 0.45, 0.30, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
 
 func _boss1_nonspell_step() -> void:
@@ -852,6 +906,39 @@ func _boss1_nonspell_step() -> void:
 	_touhou_aimed_spread("res://assets/sprites/bossbullut-1.png", 8.0, 5, 26.0)
 	if randf() < 0.35:
 		_touhou_ring("res://assets/sprites/bossbullut-2.png", 14, 6.5)
+
+func _boss1_sand_snakes() -> void:
+	# Boss1 signature: curving "sand snakes" with wave drift.
+	var token := _phase_token
+	var bullet_speed := 7.0 * 60.0
+	for i in range(30):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+		var to_player := player.global_position - global_position
+		if to_player.length() == 0.0:
+			to_player = Vector2.LEFT
+		var base_angle := to_player.angle()
+		var angle := base_angle + deg_to_rad(randf_range(-18.0, 18.0))
+		var dir := Vector2(cos(angle), sin(angle))
+
+		var b := _spawn_bullet_at(global_position, dir, bullet_speed, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-2.png")
+		if b:
+			b.rotate_with_direction = false
+			b.turn_rate = deg_to_rad(randf_range(90.0, 140.0)) * (-1.0 if (i % 2) == 0 else 1.0)
+			b.wave_amplitude = 22.0
+			b.wave_frequency = 8.0
+			b.wave_phase = randf_range(0.0, TAU)
+			b.spin_speed = deg_to_rad(220.0) * (-1.0 if (i % 2) == 0 else 1.0)
+
+		await get_tree().create_timer(0.08).timeout
 
 func _touhou_ring(texture_path: String, bullet_count: int, speed_tick: float) -> void:
 	var count := maxi(6, bullet_count)
@@ -1220,6 +1307,7 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss2_nonspell_step"),
 		Callable(self, "_boss2_generate_love"),
 		Callable(self, "_boss2_heart_trap"),
+		Callable(self, "_boss2_heart_sine_lanes"),
 		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-3.png", 8.0, 7, 26.0, 3, 0.22),
 		Callable(self, "_pattern_ring_burst").bind("res://assets/sprites/bossbullut-4.png", 18, 5.6, 2, 0.55),
 		Callable(self, "_boss2_heart_orbit_dive")
@@ -1228,6 +1316,7 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var spell_1_pool: Array[Callable] = [
 		Callable(self, "_boss2_heart_rain"),
 		Callable(self, "_boss2_use_attract"),
+		Callable(self, "_boss2_heart_sine_lanes"),
 		Callable(self, "_boss2_heart_trap"),
 		Callable(self, "_boss2_generate_love"),
 		Callable(self, "_boss2_heart_orbit_dive"),
@@ -1237,6 +1326,7 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var nonspell_2_pool: Array[Callable] = [
 		Callable(self, "_boss2_generate_love"),
 		Callable(self, "_boss2_use_attract"),
+		Callable(self, "_boss2_heart_sine_lanes"),
 		Callable(self, "_boss2_made_in_heaven"),
 		Callable(self, "_pattern_aimed_burst").bind("res://assets/sprites/bossbullut-3.png", 9.0, 5, 18.0, 5, 0.16),
 		Callable(self, "_boss2_heart_orbit_dive")
@@ -1245,6 +1335,7 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var spell_2_pool: Array[Callable] = [
 		Callable(self, "_boss2_reverse_time"),
 		Callable(self, "_boss2_use_attract"),
+		Callable(self, "_boss2_heart_sine_lanes"),
 		Callable(self, "_boss2_heart_rain"),
 		Callable(self, "_boss2_generate_love"),
 		Callable(self, "_boss2_heart_orbit_dive"),
@@ -1256,22 +1347,65 @@ func _build_boss2_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss2_made_in_heaven"),
 		Callable(self, "_boss2_reverse_time"),
 		Callable(self, "_boss2_use_attract"),
+		Callable(self, "_boss2_heart_sine_lanes"),
 		Callable(self, "_boss2_heart_rain"),
 		Callable(self, "_boss2_heart_orbit_dive"),
 		Callable(self, "_boss2_heart_trap")
 	]
 	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.65, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 1", hps[1], 60.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 2", hps[2], 45.0, 0.6, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 2", hps[3], 62.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
-		_make_phase_mix(PhaseKind.FINAL, "Final Spell", hps[4], 78.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
+		_make_phase_mix(PhaseKind.NONSPELL, "Heartbeat Barrage", hps[0], 45.0, 0.65, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Attraction Field", hps[1], 60.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
+		_make_phase_mix(PhaseKind.NONSPELL, "Heaven's Pulse", hps[2], 45.0, 0.6, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Reverse Romance", hps[3], 62.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
+		_make_phase_mix(PhaseKind.FINAL, "Made in Heaven", hps[4], 78.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
 
 func _boss2_nonspell_step() -> void:
 	_touhou_aimed_spread("res://assets/sprites/bossbullut-3.png", 7.5, 5, 22.0)
 	if randf() < 0.4:
 		_touhou_ring("res://assets/sprites/bossbullut-4.png", 16, 5.0)
+
+func _boss2_heart_sine_lanes() -> void:
+	# Boss2 signature: heart lanes with sine-wave drift (love beats).
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
+	var lanes := 7
+	var top := 90.0
+	var bottom := maxf(top + 40.0, playfield_bottom - 150.0)
+	var span := maxf(1.0, bottom - top)
+	var lane_total := maxi(3, lanes)
+
+	var waves := 6
+	var speed_tick := 9.0
+	var wave_amp := 44.0
+	var wave_freq := 4.4
+
+	for w in range(waves):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var phase_offset := (span / float(lane_total)) * float(w) * 0.8
+		for i in range(lane_total):
+			var t := float(i) / float(maxi(1, lane_total - 1))
+			var y := top + span * t
+			y = wrapf(y + phase_offset, top, bottom)
+			var spawn_pos := Vector2(viewport_size.x + 60.0, y)
+			var b := _spawn_bullet_at(spawn_pos, Vector2.LEFT, speed_tick * 60.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-4.png")
+			if b:
+				b.rotate_with_direction = false
+				b.wave_amplitude = wave_amp
+				b.wave_frequency = wave_freq
+				b.wave_phase = randf_range(0.0, TAU)
+
+		await get_tree().create_timer(0.55).timeout
 
 func _build_boss3_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var hps := _alloc_phase_hp(total_hp, [0.18, 0.20, 0.18, 0.20, 0.24])
@@ -1303,6 +1437,7 @@ func _build_boss3_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var spell_2_pool: Array[Callable] = [
 		Callable(self, "_boss3_time_bubble"),
 		Callable(self, "_boss3_time_stop"),
+		Callable(self, "_boss3_time_lock_mines"),
 		Callable(self, "_boss3_time_lock_ring"),
 		Callable(self, "_boss3_golden_storm"),
 		Callable(self, "_boss3_coin_barrage")
@@ -1313,15 +1448,16 @@ func _build_boss3_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss3_time_bubble"),
 		Callable(self, "_boss3_cut_body"),
 		Callable(self, "_boss3_time_stop"),
+		Callable(self, "_boss3_time_lock_mines"),
 		Callable(self, "_boss3_time_lock_ring"),
 		Callable(self, "_boss3_golden_storm")
 	]
 	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 1", hps[1], 62.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 2", hps[2], 45.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 2", hps[3], 65.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
-		_make_phase_mix(PhaseKind.FINAL, "Final Spell", hps[4], 82.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
+		_make_phase_mix(PhaseKind.NONSPELL, "Clockwork Prelude", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Golden Storm", hps[1], 62.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
+		_make_phase_mix(PhaseKind.NONSPELL, "Coin Barrage", hps[2], 45.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
+		_make_phase_mix(PhaseKind.SPELL, "ZA WARUDO", hps[3], 65.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
+		_make_phase_mix(PhaseKind.FINAL, "Time Collapse", hps[4], 82.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
 
 func _boss3_nonspell_step() -> void:
@@ -1329,18 +1465,76 @@ func _boss3_nonspell_step() -> void:
 	if randf() < 0.25:
 		_touhou_ring("res://assets/sprites/bossbullut-5.png", 18, 6.5)
 
+func _boss3_time_lock_mines() -> void:
+	# Boss3 signature: bullets "freeze" in place, then dash (time lock mines).
+	var token := _phase_token
+	var player := _get_player_safe()
+	if not player:
+		return
+
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
+	var scale := clampf(boss_bullet_speed_scale, 0.05, 5.0)
+	var dash_speed := 12.5 * 60.0 * scale
+
+	for ring_idx in range(3):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		player = _get_player_safe()
+		if not player:
+			return
+		var center := player.global_position
+
+		var radius := 150.0 + float(ring_idx) * 75.0
+		var count := 18 + ring_idx * 4
+		var base := randf_range(0.0, TAU)
+		for i in range(count):
+			var angle := base + (TAU / float(count)) * float(i)
+			var pos := center + Vector2(cos(angle), sin(angle)) * radius
+
+			var target := center + Vector2(randf_range(-90.0, 90.0), randf_range(-90.0, 90.0))
+			target.x = clampf(target.x, 70.0, viewport_size.x - 70.0)
+			target.y = clampf(target.y, 70.0, playfield_bottom - 70.0)
+
+			var b := _spawn_bullet_at(pos, Vector2.ZERO, 0.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-6.png")
+			if b:
+				b.direction = Vector2.ZERO
+				b.rotate_with_direction = false
+				b.spin_speed = deg_to_rad(randf_range(-360.0, 360.0))
+				# Reuse orbit mechanic with radius=0 to "hold" the bullet in place.
+				b.orbit_center = pos
+				b.orbit_radius = 0.0
+				b.orbit_angle = 0.0
+				b.orbit_angular_speed = 0.0
+				b.orbit_time_left = randf_range(0.55, 1.75)
+				b.dash_after_orbit = true
+				b.dash_target = target
+				b.dash_speed = dash_speed * randf_range(0.85, 1.15)
+
+		await get_tree().create_timer(0.35).timeout
+
 func _build_boss4_phases(total_hp: int) -> Array[BossPhaseDef]:
 	var hps := _alloc_phase_hp(total_hp, [0.18, 0.20, 0.18, 0.20, 0.24])
 	var nonspell_1_pool: Array[Callable] = [
 		Callable(self, "_boss4_light_shoot"),
 		Callable(self, "_boss4_light_single"),
 		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_glitch_packets"),
 		Callable(self, "_boss4_side_shoot"),
 		Callable(self, "_boss4_summon_ufo")
 	]
 
 	var spell_1_pool: Array[Callable] = [
 		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_glitch_packets"),
 		Callable(self, "_boss4_summon_ufo"),
 		Callable(self, "_boss4_screen_static"),
 		Callable(self, "_boss4_orbital_strike"),
@@ -1352,6 +1546,7 @@ func _build_boss4_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss4_light_shoot"),
 		Callable(self, "_boss4_summon_ufo"),
 		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_glitch_packets"),
 		Callable(self, "_boss4_light_single")
 	]
 
@@ -1360,6 +1555,7 @@ func _build_boss4_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss4_screen_static"),
 		Callable(self, "_boss4_orbital_strike"),
 		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_glitch_packets"),
 		Callable(self, "_boss4_side_shoot")
 	]
 
@@ -1369,15 +1565,16 @@ func _build_boss4_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss4_summon_ufo"),
 		Callable(self, "_boss4_screen_static"),
 		Callable(self, "_boss4_drag_shoot"),
+		Callable(self, "_boss4_glitch_packets"),
 		Callable(self, "_boss4_side_shoot"),
 		Callable(self, "_boss4_light_shoot")
 	]
 	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 1", hps[1], 62.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 2", hps[2], 45.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 2", hps[3], 65.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
-		_make_phase_mix(PhaseKind.FINAL, "Final Spell", hps[4], 85.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
+		_make_phase_mix(PhaseKind.NONSPELL, "Warning Beams", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Signal Interference", hps[1], 62.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
+		_make_phase_mix(PhaseKind.NONSPELL, "UFO Patrol", hps[2], 45.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Orbital Strike", hps[3], 65.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
+		_make_phase_mix(PhaseKind.FINAL, "Pixel Apocalypse", hps[4], 85.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
 
 func _build_boss5_phases(total_hp: int) -> Array[BossPhaseDef]:
@@ -1424,11 +1621,11 @@ func _build_boss5_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss5_gravity_sink")
 	]
 	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 1", hps[1], 62.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 2", hps[2], 45.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 2", hps[3], 68.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
-		_make_phase_mix(PhaseKind.FINAL, "Final Spell", hps[4], 92.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
+		_make_phase_mix(PhaseKind.NONSPELL, "TNT Parade", hps[0], 45.0, 0.6, 0.45, 1.0, nonspell_1_pool[0], nonspell_1_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Gravity Sink", hps[1], 62.0, 0.0, 0.34, 1.2, spell_1_pool[0], spell_1_pool),
+		_make_phase_mix(PhaseKind.NONSPELL, "Chain Detonation", hps[2], 45.0, 0.55, 0.45, 1.0, nonspell_2_pool[0], nonspell_2_pool),
+		_make_phase_mix(PhaseKind.SPELL, "Cursed Regeneration", hps[3], 68.0, 0.0, 0.34, 1.2, spell_2_pool[0], spell_2_pool),
+		_make_phase_mix(PhaseKind.FINAL, "Bakuretsu Finale", hps[4], 92.0, 0.5, 0.28, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
 
 func _build_boss6_phases(total_hp: int) -> Array[BossPhaseDef]:
@@ -1502,11 +1699,11 @@ func _build_boss6_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_pattern_bouncy_star_stream").bind("res://assets/sprites/bossbullut-9.png", 12, 20.0, 0.28, 42.0, 600.0)
 	]
 	return [
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 1", hps[0], 55.0, 0.5, 0.34, 1.0, nonspell_1_pool[0], nonspell_1_pool, PatternPoolMode.RANDOM),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 1", hps[1], 72.0, 0.0, 0.26, 1.2, spell_1_pool[0], spell_1_pool, PatternPoolMode.RANDOM),
-		_make_phase_mix(PhaseKind.NONSPELL, "Nonspell 2", hps[2], 58.0, 0.45, 0.32, 1.0, nonspell_2_pool[0], nonspell_2_pool, PatternPoolMode.RANDOM),
-		_make_phase_mix(PhaseKind.SPELL, "Spell Card 2", hps[3], 78.0, 0.0, 0.24, 1.2, spell_2_pool[0], spell_2_pool, PatternPoolMode.RANDOM),
-		_make_phase_mix(PhaseKind.FINAL, "Final Spell", hps[4], 110.0, 0.4, 0.20, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
+		_make_phase_mix(PhaseKind.NONSPELL, "Inferno Overture", hps[0], 55.0, 0.5, 0.34, 1.0, nonspell_1_pool[0], nonspell_1_pool, PatternPoolMode.RANDOM),
+		_make_phase_mix(PhaseKind.SPELL, "Pentagram Blaze", hps[1], 72.0, 0.0, 0.26, 1.2, spell_1_pool[0], spell_1_pool, PatternPoolMode.RANDOM),
+		_make_phase_mix(PhaseKind.NONSPELL, "Teleport Convergence", hps[2], 58.0, 0.45, 0.32, 1.0, nonspell_2_pool[0], nonspell_2_pool, PatternPoolMode.RANDOM),
+		_make_phase_mix(PhaseKind.SPELL, "Cross Laser Cathedral", hps[3], 78.0, 0.0, 0.24, 1.2, spell_2_pool[0], spell_2_pool, PatternPoolMode.RANDOM),
+		_make_phase_mix(PhaseKind.FINAL, "Apocalypse Symphony", hps[4], 110.0, 0.4, 0.20, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
 
 func _boss6_phase1_fire_rain() -> void:
@@ -2998,6 +3195,38 @@ func _boss4_drag_shoot() -> void:
 		await get_tree().create_timer(0.2).timeout
 		if _pattern_should_abort(token):
 			return
+
+func _boss4_glitch_packets() -> void:
+	# Boss4 signature: glitch packets (high-frequency wave drift).
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
+	for _burst in range(8):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		for _i in range(10):
+			var y := randf_range(90.0, maxf(90.0, playfield_bottom - 140.0))
+			var x := viewport_size.x + randf_range(20.0, 140.0)
+			var dir := Vector2.LEFT.rotated(deg_to_rad(randf_range(-12.0, 12.0)))
+			var b := _spawn_bullet_at(Vector2(x, y), dir, 8.0 * 60.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/error.png")
+			if b:
+				b.rotate_with_direction = false
+				b.spin_speed = deg_to_rad(randf_range(-720.0, 720.0))
+				b.wave_amplitude = randf_range(10.0, 26.0)
+				b.wave_frequency = randf_range(14.0, 22.0)
+				b.wave_phase = randf_range(0.0, TAU)
+				b.turn_rate = deg_to_rad(randf_range(-70.0, 70.0)) * 0.35
+				b.damage = randi_range(7, 9)
+
+		await get_tree().create_timer(0.32).timeout
 
 func _boss4_summon_ufo() -> void:
 	# Python: 12 aliens falling from the top.

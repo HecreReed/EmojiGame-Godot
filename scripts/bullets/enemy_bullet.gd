@@ -22,6 +22,12 @@ enum BulletType {
 @export var start_delay: float = 0.0 # Seconds before the bullet starts moving
 @export var acceleration: float = 0.0 # px/s^2, applied after start_delay
 
+# Wave motion (Touhou-like): sinusoidal drift perpendicular to travel direction.
+# If `wave_amplitude` or `wave_frequency` is 0, the wave motion is disabled.
+@export var wave_amplitude: float = 0.0 # px
+@export var wave_frequency: float = 0.0 # rad/sec
+@export var wave_phase: float = 0.0 # rad
+
 var direction: Vector2 = Vector2.LEFT
 var target_position: Vector2 = Vector2.ZERO
 var tracking_enabled: bool = false
@@ -29,6 +35,7 @@ var tan_value: float = 0.0
 var rotation_angle: float = 0.0
 var is_blown_away: bool = false
 var _was_time_stop_active: bool = false
+var _wave_time: float = 0.0
 
 # Orbit (Touhou-like gimmick): keep the bullet circling for a while, then optionally dash.
 var orbit_center: Vector2 = Vector2.ZERO
@@ -77,6 +84,7 @@ func _physics_process(delta):
 				speed = maxf(0.0, speed + acceleration * delta)
 
 			position += direction * speed * delta
+			_apply_wave(delta)
 
 			if can_return:
 				_apply_wall_bounce()
@@ -142,6 +150,16 @@ func aim_at_player() -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player and is_instance_valid(player) and not player.is_queued_for_deletion():
 		direction = (player.global_position - global_position).normalized()
+
+func _apply_wave(delta: float) -> void:
+	if wave_amplitude == 0.0 or wave_frequency == 0.0:
+		return
+	if direction.length() == 0.0:
+		return
+	_wave_time += delta
+	var perp := Vector2(-direction.y, direction.x).normalized()
+	var lateral_speed := wave_amplitude * wave_frequency * cos(_wave_time * wave_frequency + wave_phase)
+	position += perp * lateral_speed * delta
 
 func _check_overlap_on_time_stop_resume() -> void:
 	# Python parity: time stop renders bullets but does not process collisions.
