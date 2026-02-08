@@ -16,7 +16,9 @@ enum BulletType {
 	BOUNCE,      # 弹跳弹 - 碰墙反弹
 	HOMING,      # 追踪弹 - 持续追踪玩家
 	WAVE_SINE,   # 正弦波弹
-	WAVE_COS     # 余弦波弹
+	WAVE_COS,    # 余弦波弹
+	SINE_WAVE,   # 正弦波弹（兼容Boss脚本旧命名）
+	CURVE        # 曲线弹（缓慢转向）
 }
 
 @export var speed: float = 400.0
@@ -50,6 +52,8 @@ var _lifetime: float = 0.0  # 用于分裂弹等需要计时的类型
 var _split_triggered: bool = false  # 分裂弹是否已分裂
 var _butterfly_time: float = 0.0  # 蝴蝶弹计时器
 var _homing_strength: float = 2.0  # 追踪强度
+var _homing_duration: float = 1.0  # 追踪持续时间（秒）
+var _homing_finished: bool = false  # 追踪是否结束
 
 # Orbit (Touhou-like gimmick): keep the bullet circling for a while, then optionally dash.
 var orbit_center: Vector2 = Vector2.ZERO
@@ -141,11 +145,15 @@ func _physics_process(delta):
 					_apply_wall_bounce()
 
 				BulletType.HOMING:
-					# 追踪弹 - 持续追踪
-					var player := get_tree().get_first_node_in_group("player") as Node2D
-					if player and is_instance_valid(player):
-						var to_player := (player.global_position - global_position).normalized()
-						direction = direction.lerp(to_player, _homing_strength * delta).normalized()
+					# 追踪弹 - 追踪一段时间后沿切线射击
+					if not _homing_finished and _lifetime < _homing_duration:
+						var player := get_tree().get_first_node_in_group("player") as Node2D
+						if player and is_instance_valid(player):
+							var to_player := (player.global_position - global_position).normalized()
+							direction = direction.lerp(to_player, _homing_strength * delta).normalized()
+					elif not _homing_finished:
+						# 追踪结束，锁定当前方向
+						_homing_finished = true
 					position += direction * speed * delta
 
 				BulletType.WAVE_SINE:
@@ -161,6 +169,21 @@ func _physics_process(delta):
 					var perp := Vector2(-direction.y, direction.x).normalized()
 					var wave_offset := cos(_wave_time * 4.0) * 30.0
 					position += direction * speed * delta + perp * wave_offset * delta
+
+				BulletType.SINE_WAVE:
+					# 兼容Boss脚本的正弦波弹（更明显一些）
+					_wave_time += delta
+					var perp := Vector2(-direction.y, direction.x).normalized()
+					var wave_offset := sin(_wave_time * 4.2) * 40.0
+					position += direction * speed * delta + perp * wave_offset * delta
+
+				BulletType.CURVE:
+					# 曲线弹：持续缓慢转向（类似东方里“弧线”弹）
+					var rate := turn_rate
+					if rate == 0.0:
+						rate = 1.2
+					direction = direction.rotated(rate * delta).normalized()
+					position += direction * speed * delta
 
 				_:
 					# 默认行为（NORMAL, TRACKING等）

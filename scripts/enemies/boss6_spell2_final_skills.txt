@@ -1,0 +1,475 @@
+
+# =============================================================================
+# SPELL 2 - Cathedral Patterns (10 skills)
+# =============================================================================
+
+func _boss6_cathedral_pillars() -> void:
+	# Vertical laser pillars
+	if not bullet_scene or not get_parent():
+		return
+	for pillar in range(6):
+		var x_pos = 150 + pillar * 120
+		for i in range(15):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(x_pos, 50 + i * 5)
+			bullet.direction = Vector2(0, 1)
+			bullet.speed = 250.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.4).timeout
+
+func _boss6_stained_glass() -> void:
+	# Colorful geometric patterns
+	if not bullet_scene or not get_parent():
+		return
+	var sprites = [
+		"res://assets/sprites/bossbullut-1.png",
+		"res://assets/sprites/bossbullut-3.png",
+		"res://assets/sprites/bossbullut-5.png",
+		"res://assets/sprites/bossbullut-6.png",
+		"res://assets/sprites/bossbullut-9.png",
+		"res://assets/sprites/bossbullut-11.png"
+	]
+	for pattern in range(4):
+		for i in range(36):
+			var angle = (TAU / 36) * i + pattern * 0.1
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 170.0
+			bullet.set_sprite(sprites[i % sprites.size()])
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.6).timeout
+
+func _boss6_holy_cross() -> void:
+	# Cross-shaped laser pattern
+	if not bullet_scene or not get_parent():
+		return
+	for cross in range(4):
+		var rotation = cross * PI / 8
+		# Horizontal arm
+		for i in range(25):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(rotation), sin(rotation))
+			bullet.speed = 100.0 + i * 8.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+			var bullet2 = bullet_scene.instantiate() as EnemyBullet
+			bullet2.global_position = global_position
+			bullet2.direction = Vector2(cos(rotation + PI), sin(rotation + PI))
+			bullet2.speed = 100.0 + i * 8.0
+			bullet2.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet2)
+		# Vertical arm
+		for i in range(25):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(rotation + PI/2), sin(rotation + PI/2))
+			bullet.speed = 100.0 + i * 8.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+			var bullet2 = bullet_scene.instantiate() as EnemyBullet
+			bullet2.global_position = global_position
+			bullet2.direction = Vector2(cos(rotation + 3*PI/2), sin(rotation + 3*PI/2))
+			bullet2.speed = 100.0 + i * 8.0
+			bullet2.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet2)
+		await get_tree().create_timer(0.8).timeout
+
+func _boss6_divine_judgment_aimed() -> void:
+	# Aimed divine beams
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+	for judgment in range(8):
+		var aim = global_position.direction_to(player.global_position).angle()
+		for i in range(15):
+			var spread = aim + (i - 7) * 0.12
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 260.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.4).timeout
+
+func _boss6_angel_wings() -> void:
+	# Wing-shaped bullet fans
+	if not bullet_scene or not get_parent():
+		return
+	for wing in range(4):
+		# Left wing
+		for i in range(15):
+			var angle = PI + PI/6 + i * 0.08
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 180.0 + i * 3.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		# Right wing
+		for i in range(15):
+			var angle = -PI/6 - i * 0.08
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 180.0 + i * 3.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.7).timeout
+
+func _boss6_heaven_gate() -> void:
+	# Gate-like bullet walls
+	if not bullet_scene or not get_parent():
+		return
+	for gate in range(4):
+		# Left pillar
+		for i in range(12):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(global_position.x - 150, global_position.y - 100 + i * 20)
+			bullet.direction = Vector2(0, 1)
+			bullet.speed = 180.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		# Right pillar
+		for i in range(12):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(global_position.x + 150, global_position.y - 100 + i * 20)
+			bullet.direction = Vector2(0, 1)
+			bullet.speed = 180.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		# Arch
+		for i in range(16):
+			var angle = PI + (TAU / 32) * i
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position + Vector2(0, -100)
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 160.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.8).timeout
+
+func _boss6_sacred_arrow() -> void:
+	# Divine aimed arrows
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+	for arrow in range(10):
+		var aim = global_position.direction_to(player.global_position).angle()
+		# Arrow head
+		for i in range(5):
+			var spread = aim + (i - 2) * 0.15
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 250.0
+			bullet.bullet_type = EnemyBullet.BulletType.HOMING
+			bullet._homing_strength = 2.0
+			bullet._homing_duration = 0.4
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		# Arrow trail
+		for i in range(8):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(aim), sin(aim))
+			bullet.speed = 230.0 - i * 10.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-9.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.35).timeout
+
+func _boss6_blessing_rain() -> void:
+	# Dense divine rain
+	if not bullet_scene or not get_parent():
+		return
+	for rain in range(6):
+		for i in range(25):
+			var x_pos = 100 + randf() * 700
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(x_pos, 50)
+			bullet.direction = Vector2(sin(i * 0.3) * 0.2, 1).normalized()
+			bullet.speed = 220.0 + randf() * 40.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+			await get_tree().create_timer(0.03).timeout
+		await get_tree().create_timer(0.4).timeout
+
+func _boss6_choir_of_light() -> void:
+	# Rhythmic light bursts
+	if not bullet_scene or not get_parent():
+		return
+	for choir in range(8):
+		var count = 16 + (choir % 3) * 4
+		for i in range(count):
+			var angle = (TAU / count) * i + choir * 0.15
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 180.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.4).timeout
+
+func _boss6_sanctuary_seal() -> void:
+	# Sealing ring patterns
+	if not bullet_scene or not get_parent():
+		return
+	for seal in range(3):
+		# Inner ring
+		for i in range(20):
+			var angle = (TAU / 20) * i
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 140.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-9.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.2).timeout
+		# Middle ring
+		for i in range(28):
+			var angle = (TAU / 28) * i + 0.1
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 170.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.2).timeout
+		# Outer ring
+		for i in range(36):
+			var angle = (TAU / 36) * i + 0.2
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 200.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.8).timeout
+
+# =============================================================================
+# FINAL - Apocalypse (8 skills)
+# =============================================================================
+
+func _boss6_ragnarok() -> void:
+	# All elements combined
+	if not bullet_scene or not get_parent():
+		return
+	# Fire spiral
+	for i in range(30):
+		var angle = i * 0.5
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 200.0
+		bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_parent().add_child(bullet)
+	await get_tree().create_timer(0.3).timeout
+	# Lightning burst
+	for i in range(24):
+		var angle = (TAU / 24) * i
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 250.0
+		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+		get_parent().add_child(bullet)
+	await get_tree().create_timer(0.3).timeout
+	# Gravity pull
+	for i in range(32):
+		var angle = (TAU / 32) * i
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 180.0
+		bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+		bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+		get_parent().add_child(bullet)
+
+func _boss6_genesis_wave() -> void:
+	# Creation-level burst
+	if not bullet_scene or not get_parent():
+		return
+	for wave in range(5):
+		var count = 24 + wave * 8
+		for i in range(count):
+			var angle = (TAU / count) * i
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 160.0 + wave * 25.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.4).timeout
+
+func _boss6_void_collapse() -> void:
+	# Collapsing void
+	if not bullet_scene or not get_parent():
+		return
+	for collapse in range(4):
+		# Outward
+		for i in range(40):
+			var angle = (TAU / 40) * i
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 220.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.3).timeout
+		# Inward spiral
+		for i in range(30):
+			var angle = i * 0.4
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 180.0
+			bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.5).timeout
+
+func _boss6_cosmic_storm() -> void:
+	# Space-themed chaos
+	if not bullet_scene or not get_parent():
+		return
+	for storm in range(5):
+		# Random bursts
+		for i in range(30):
+			var angle = randf() * TAU
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position + Vector2(randf() * 200 - 100, randf() * 200 - 100)
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 150.0 + randf() * 100.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			get_parent().add_child(bullet)
+		# Spiral overlay
+		for i in range(16):
+			var angle = storm * 0.5 + i * 0.4
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 200.0
+			bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+			bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.6).timeout
+
+func _boss6_eternal_flame() -> void:
+	# Infinite fire spiral
+	if not bullet_scene or not get_parent():
+		return
+	for i in range(120):
+		for arm in range(4):
+			var angle = i * 0.3 + arm * TAU / 4
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 190.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+
+func _boss6_omega_burst() -> void:
+	# Ultimate burst
+	if not bullet_scene or not get_parent():
+		return
+	for burst in range(3):
+		# Dense ring
+		for i in range(60):
+			var angle = (TAU / 60) * i
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 240.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.3).timeout
+		# Aimed burst
+		var player = get_tree().get_first_node_in_group("player")
+		if player:
+			var aim = global_position.direction_to(player.global_position).angle()
+			for i in range(20):
+				var spread = aim + (i - 9.5) * 0.12
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(spread), sin(spread))
+				bullet.speed = 280.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.5).timeout
+
+func _boss6_armageddon_rain() -> void:
+	# Dense rain of everything
+	if not bullet_scene or not get_parent():
+		return
+	for rain in range(5):
+		# Top rain
+		for i in range(20):
+			var x_pos = 100 + randf() * 700
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(x_pos, 50)
+			bullet.direction = Vector2(0, 1)
+			bullet.speed = 250.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		# Side bullets
+		for i in range(10):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(50, 100 + i * 50)
+			bullet.direction = Vector2(1, 0.2)
+			bullet.speed = 200.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+			var bullet2 = bullet_scene.instantiate() as EnemyBullet
+			bullet2.global_position = Vector2(850, 100 + i * 50)
+			bullet2.direction = Vector2(-1, 0.2)
+			bullet2.speed = 200.0
+			bullet2.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet2)
+		await get_tree().create_timer(0.5).timeout
+
+func _boss6_final_revelation() -> void:
+	# Ultimate combined pattern
+	if not bullet_scene or not get_parent():
+		return
+	# Phase 1: Spiral
+	for i in range(40):
+		var angle = i * 0.4
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 200.0
+		bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+		get_parent().add_child(bullet)
+	await get_tree().create_timer(0.3).timeout
+	# Phase 2: Rings
+	for ring in range(3):
+		for i in range(40):
+			var angle = (TAU / 40) * i + ring * 0.15
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 180.0 + ring * 20.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.2).timeout
+	# Phase 3: Aimed
+	var player = get_tree().get_first_node_in_group("player")
+	if player:
+		var aim = global_position.direction_to(player.global_position).angle()
+		for i in range(24):
+			var spread = aim + (i - 11.5) * 0.1
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 260.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
