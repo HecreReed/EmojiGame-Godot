@@ -444,32 +444,55 @@ func shoot() -> void:
 		EnemyKind.MINIBOSS:
 			_shoot_miniboss()
 			return
+		EnemyKind.FAST:
+			_shoot_fast()
+			return
+		EnemyKind.TANK:
+			_shoot_tank()
+			return
+		EnemyKind.SHIELD:
+			_shoot_shield()
+			return
+		EnemyKind.SPLIT:
+			_shoot_split()
+			return
 		_:
 			pass
 
 	var temp := randf()
 	if enemy_kind == EnemyKind.BASE_6 or enemy_kind == EnemyKind.BASE_7:
-		if temp < 0.25:
+		# 高级小怪 - 更多花哨弹幕
+		if temp < 0.15:
 			_shoot_track()
-		elif temp < 0.5:
+		elif temp < 0.3:
 			_shoot_random()
-		elif temp < 0.75:
+		elif temp < 0.45:
 			_shoot_sand()
-		else:
+		elif temp < 0.6:
 			_shoot_circle()
-	elif enemy_kind == EnemyKind.BASE_4 or enemy_kind == EnemyKind.BASE_5:
-		if temp < 0.25:
-			_shoot_normal()
-		elif temp < 0.5:
-			_shoot_track()
 		elif temp < 0.75:
-			_shoot_random()
+			_shoot_spiral_mini()
+		elif temp < 0.9:
+			_shoot_butterfly_mini()
 		else:
-			_shoot_sand()
-	else:
-		if temp < 0.33:
+			_shoot_wave_mini()
+	elif enemy_kind == EnemyKind.BASE_4 or enemy_kind == EnemyKind.BASE_5:
+		# 中级小怪 - 混合弹幕
+		if temp < 0.2:
 			_shoot_normal()
-		elif temp < 0.67:
+		elif temp < 0.4:
+			_shoot_track()
+		elif temp < 0.6:
+			_shoot_random()
+		elif temp < 0.8:
+			_shoot_sand()
+		else:
+			_shoot_spiral_mini()
+	else:
+		# 低级小怪 - 基础弹幕
+		if temp < 0.4:
+			_shoot_normal()
+		elif temp < 0.7:
 			_shoot_track()
 		else:
 			_shoot_random()
@@ -546,7 +569,7 @@ func _shoot_circle() -> void:
 
 
 func _shoot_sniper() -> void:
-	# Python: 3 bullets, same aim, EmemiesBumb speed=15, sample is reversed (NewEnemyTypes.py)
+	# 狙击手 - 精准激光+追踪弹组合
 	var origin := _python_pos()
 	var player_pos := _get_player_python_pos()
 	var dx := player_pos.x - origin.x
@@ -554,30 +577,85 @@ func _shoot_sniper() -> void:
 	if dx != 0.0:
 		tan_value = (player_pos.y - origin.y) / dx
 	var sample := 1 if dx < 0.0 else -1
+
+	# 发射3个激光弹
 	for _i in range(3):
-		_spawn_python_bullet(origin, tan_value, sample, 15.0, EnemyBullet.BulletType.NORMAL, "")
+		var bullet := _spawn_python_bullet(origin, tan_value, sample, 18.0, EnemyBullet.BulletType.LASER, "res://assets/sprites/bossbullut-5.png")
+		if bullet:
+			bullet.bullet_type = EnemyBullet.BulletType.LASER
+
+	# 额外发射1个追踪弹
+	await get_tree().create_timer(0.2).timeout
+	var homing_bullet := _spawn_python_bullet(origin, tan_value, sample, 10.0, EnemyBullet.BulletType.HOMING, "res://assets/sprites/bossbullut-11.png")
+	if homing_bullet:
+		homing_bullet.bullet_type = EnemyBullet.BulletType.HOMING
+		homing_bullet._homing_strength = 3.0
 
 
 func _shoot_elite() -> void:
-	# Fan bullets -30..30 deg, EmemiesBumb speed=8 (NewEnemyTypes.py)
+	# 精英敌人 - 多重弹幕组合
 	var origin := _python_pos()
-	for angle_deg in range(-30, 31, 15):
-		var angle_rad := deg_to_rad(float(angle_deg))
-		var tan_value := _safe_tan(angle_rad)
-		var sample := -1 if angle_deg > -90 and angle_deg < 90 else 1
-		_spawn_python_bullet(origin, tan_value, sample, 8.0, EnemyBullet.BulletType.SAND, "")
+	var temp := randf()
+
+	if temp < 0.33:
+		# 模式1：扇形螺旋弹
+		for angle_deg in range(-30, 31, 15):
+			var angle_rad := deg_to_rad(float(angle_deg))
+			var tan_value := _safe_tan(angle_rad)
+			var sample := -1 if angle_deg > -90 and angle_deg < 90 else 1
+			var bullet := _spawn_python_bullet(origin, tan_value, sample, 9.0, EnemyBullet.BulletType.SPIRAL, "res://assets/sprites/bossbullut-3.png")
+			if bullet:
+				bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+	elif temp < 0.67:
+		# 模式2：环形分裂弹
+		for angle_deg in range(0, 360, 45):
+			var angle_rad := deg_to_rad(float(angle_deg))
+			var tan_value := _safe_tan(angle_rad)
+			var mod_deg := float(angle_deg)
+			if mod_deg < 0.0:
+				mod_deg += 360.0
+			var sample := 1 if mod_deg > 90.0 and mod_deg < 270.0 else -1
+			var bullet := _spawn_python_bullet(origin, tan_value, sample, 10.0, EnemyBullet.BulletType.SPLIT, "res://assets/sprites/bossbullut-6.png")
+			if bullet:
+				bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+	else:
+		# 模式3：追踪弹+波浪弹组合
+		var player_pos := _get_player_python_pos()
+		var tan_sample := _calc_tan_and_sample(origin, player_pos)
+
+		# 3个追踪弹
+		for i in range(3):
+			var offset := (i - 1) * 0.3
+			var angle := atan(tan_sample.tan_value) + offset
+			var new_tan := tan(angle)
+			var bullet := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 11.0, EnemyBullet.BulletType.HOMING, "res://assets/sprites/bossbullut-11.png")
+			if bullet:
+				bullet.bullet_type = EnemyBullet.BulletType.HOMING
+				bullet._homing_strength = 2.0
+
+		# 2个波浪弹
+		await get_tree().create_timer(0.15).timeout
+		for i in range(2):
+			var offset := (i - 0.5) * 0.5
+			var angle := atan(tan_sample.tan_value) + offset
+			var new_tan := tan(angle)
+			var bullet_type := EnemyBullet.BulletType.WAVE_SINE if i % 2 == 0 else EnemyBullet.BulletType.WAVE_COS
+			var bullet := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 9.0, bullet_type, "res://assets/sprites/bossbullut-10.png")
+			if bullet:
+				bullet.bullet_type = bullet_type
 
 
 func _shoot_miniboss() -> void:
-	# Pattern changes every 5 seconds (NewEnemyTypes.py)
+	# Miniboss - 东方风格中boss弹幕，每5秒切换模式
 	var now_sec := Time.get_ticks_msec() / 1000.0
 	if now_sec - pattern_change_time_sec > 5.0:
-		attack_pattern = (attack_pattern + 1) % 3
+		attack_pattern = (attack_pattern + 1) % 5  # 增加到5种模式
 		pattern_change_time_sec = now_sec
 
 	var origin := _python_pos()
 	match attack_pattern:
 		0:
+			# 模式0：旋转环形弹幕
 			var offset_deg := fmod(now_sec * 100.0, 360.0)
 			for angle_deg in range(0, 360, 30):
 				var total_deg := float(angle_deg) + offset_deg
@@ -587,22 +665,211 @@ func _shoot_miniboss() -> void:
 				if mod_deg < 0.0:
 					mod_deg += 360.0
 				var sample := 1 if mod_deg > 90.0 and mod_deg < 270.0 else -1
-				_spawn_python_bullet(origin, tan_value, sample, 6.0, EnemyBullet.BulletType.CIRCLE, "")
+				_spawn_python_bullet(origin, tan_value, sample, 7.0, EnemyBullet.BulletType.CIRCLE, "res://assets/sprites/bossbullut-10.png")
 		1:
+			# 模式1：追踪弹雨
 			var player_pos := _get_player_python_pos()
 			var dx := player_pos.x - origin.x
 			var tan_value := 0.0
 			if dx != 0.0:
 				tan_value = (player_pos.y - origin.y) / dx
 			var sample := -1 if dx > 0.0 else 1
-			for _i in range(5):
-				_spawn_python_bullet(origin, tan_value, sample, 8.0, EnemyBullet.BulletType.TRACKING, "")
+			for i in range(5):
+				var offset := (i - 2) * 0.2
+				var angle := atan(tan_value) + offset
+				var new_tan := tan(angle)
+				var bullet := _spawn_python_bullet(origin, new_tan, sample, 10.0, EnemyBullet.BulletType.HOMING, "res://assets/sprites/bossbullut-11.png")
+				if bullet:
+					bullet.bullet_type = EnemyBullet.BulletType.HOMING
+					bullet._homing_strength = 2.5
+		2:
+			# 模式2：螺旋弹幕
+			for angle_deg in range(0, 360, 45):
+				var angle_rad := deg_to_rad(float(angle_deg))
+				var tan_value := _safe_tan(angle_rad)
+				var mod_deg := float(angle_deg)
+				if mod_deg < 0.0:
+					mod_deg += 360.0
+				var sample := 1 if mod_deg > 90.0 and mod_deg < 270.0 else -1
+				var bullet := _spawn_python_bullet(origin, tan_value, sample, 9.0, EnemyBullet.BulletType.SPIRAL, "res://assets/sprites/bossbullut-3.png")
+				if bullet:
+					bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+		3:
+			# 模式3：分裂弹环
+			for angle_deg in range(0, 360, 60):
+				var angle_rad := deg_to_rad(float(angle_deg))
+				var tan_value := _safe_tan(angle_rad)
+				var mod_deg := float(angle_deg)
+				if mod_deg < 0.0:
+					mod_deg += 360.0
+				var sample := 1 if mod_deg > 90.0 and mod_deg < 270.0 else -1
+				var bullet := _spawn_python_bullet(origin, tan_value, sample, 11.0, EnemyBullet.BulletType.SPLIT, "res://assets/sprites/bossbullut-6.png")
+				if bullet:
+					bullet.bullet_type = EnemyBullet.BulletType.SPLIT
 		_:
-			for _i in range(8):
-				var speed_value := float(randi_range(5, 12))
-				var tan_value := randf_range(-2.0, 2.0)
-				var sample: int = (-1 if randf() < 0.5 else 1)
-				_spawn_python_bullet(origin, tan_value, sample, speed_value, EnemyBullet.BulletType.RANDOM, "")
+			# 模式4：波浪墙+激光组合
+			var player_pos := _get_player_python_pos()
+			var tan_sample := _calc_tan_and_sample(origin, player_pos)
+
+			# 波浪弹
+			for i in range(5):
+				var offset := (i - 2) * 0.3
+				var angle := atan(tan_sample.tan_value) + offset
+				var new_tan := tan(angle)
+				var bullet_type := EnemyBullet.BulletType.WAVE_SINE if i % 2 == 0 else EnemyBullet.BulletType.WAVE_COS
+				var bullet := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 9.0, bullet_type, "res://assets/sprites/bossbullut-10.png")
+				if bullet:
+					bullet.bullet_type = bullet_type
+
+			# 激光
+			await get_tree().create_timer(0.2).timeout
+			for i in range(2):
+				var offset := (i - 0.5) * 0.4
+				var angle := atan(tan_sample.tan_value) + offset
+				var new_tan := tan(angle)
+				var laser := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 20.0, EnemyBullet.BulletType.LASER, "res://assets/sprites/bossbullut-5.png")
+				if laser:
+					laser.bullet_type = EnemyBullet.BulletType.LASER
+
+
+# ============================================================================
+# 东方Project风格的小怪弹幕
+# ============================================================================
+
+# 快速敌人 - 激光弹幕
+func _shoot_fast() -> void:
+	var origin := _python_pos()
+	var player_pos := _get_player_python_pos()
+	var tan_sample := _calc_tan_and_sample(origin, player_pos)
+	# 发射3个激光弹
+	for i in range(3):
+		var bullet := _spawn_python_bullet(origin, tan_sample.tan_value, tan_sample.sample, 20.0, EnemyBullet.BulletType.LASER, "res://assets/sprites/bossbullut-5.png")
+		if bullet:
+			bullet.bullet_type = EnemyBullet.BulletType.LASER
+		await get_tree().create_timer(0.05).timeout
+
+# 坦克敌人 - 重型弹幕
+func _shoot_tank() -> void:
+	var origin := _python_pos()
+	# 发射5方向扇形弹幕
+	for angle_deg in range(-30, 31, 15):
+		var angle_rad := deg_to_rad(float(angle_deg))
+		var tan_value := _safe_tan(angle_rad)
+		var sample := -1 if angle_deg > -90 and angle_deg < 90 else 1
+		_spawn_python_bullet(origin, tan_value, sample, 6.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-6.png")
+
+# 护盾敌人 - 旋转弹幕
+func _shoot_shield() -> void:
+	var origin := _python_pos()
+	var now_sec := Time.get_ticks_msec() / 1000.0
+	var offset := fmod(now_sec * 50.0, 360.0)
+	# 发射4方向旋转弹幕
+	for angle_deg in range(0, 360, 90):
+		var total_deg := float(angle_deg) + offset
+		var angle_rad := deg_to_rad(total_deg)
+		var tan_value := _safe_tan(angle_rad)
+		var mod_deg := fmod(total_deg, 360.0)
+		if mod_deg < 0.0:
+			mod_deg += 360.0
+		var sample := 1 if mod_deg > 90.0 and mod_deg < 270.0 else -1
+		var bullet := _spawn_python_bullet(origin, tan_value, sample, 8.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-10.png")
+		if bullet:
+			bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+
+# 分裂敌人 - 分裂弹幕
+func _shoot_split() -> void:
+	var origin := _python_pos()
+	var player_pos := _get_player_python_pos()
+	var tan_sample := _calc_tan_and_sample(origin, player_pos)
+	# 发射分裂弹
+	if not is_child_split:
+		# 父敌人发射3个分裂弹
+		for i in range(3):
+			var offset_angle := (i - 1) * 0.3
+			var angle := atan(tan_sample.tan_value) + offset_angle
+			var new_tan := tan(angle)
+			var bullet := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 12.0, EnemyBullet.BulletType.SPLIT, "res://assets/sprites/bossbullut-6.png")
+			if bullet:
+				bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+	else:
+		# 子敌人发射普通弹
+		_shoot_normal()
+
+# 螺旋弹幕（小型）
+func _shoot_spiral_mini() -> void:
+	var origin := _python_pos()
+	# 发射3个螺旋弹
+	for angle_deg in range(0, 360, 120):
+		var angle_rad := deg_to_rad(float(angle_deg))
+		var tan_value := _safe_tan(angle_rad)
+		var mod_deg := float(angle_deg)
+		if mod_deg < 0.0:
+			mod_deg += 360.0
+		var sample := 1 if mod_deg > 90.0 and mod_deg < 270.0 else -1
+		var bullet := _spawn_python_bullet(origin, tan_value, sample, 9.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-3.png")
+		if bullet:
+			bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+
+# 蝴蝶弹幕（小型）
+func _shoot_butterfly_mini() -> void:
+	var origin := _python_pos()
+	var player_pos := _get_player_python_pos()
+	var tan_sample := _calc_tan_and_sample(origin, player_pos)
+	# 发射2个蝴蝶弹
+	for i in range(2):
+		var offset := (i - 0.5) * 0.4
+		var angle := atan(tan_sample.tan_value) + offset
+		var new_tan := tan(angle)
+		var bullet := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 10.0, EnemyBullet.BulletType.NORMAL, "res://assets/sprites/bossbullut-3.png")
+		if bullet:
+			bullet.bullet_type = EnemyBullet.BulletType.BUTTERFLY
+
+# 波浪弹幕（小型）
+func _shoot_wave_mini() -> void:
+	var origin := _python_pos()
+	var player_pos := _get_player_python_pos()
+	var tan_sample := _calc_tan_and_sample(origin, player_pos)
+	# 发射3个波浪弹
+	for i in range(3):
+		var offset := (i - 1) * 0.25
+		var angle := atan(tan_sample.tan_value) + offset
+		var new_tan := tan(angle)
+		var bullet_type := EnemyBullet.BulletType.WAVE_SINE if i % 2 == 0 else EnemyBullet.BulletType.WAVE_COS
+		var bullet := _spawn_python_bullet(origin, new_tan, tan_sample.sample, 9.0, bullet_type, "res://assets/sprites/bossbullut-10.png")
+		if bullet:
+			bullet.bullet_type = bullet_type
+
+# 加速弹幕
+func _shoot_accelerate() -> void:
+	var origin := _python_pos()
+	var player_pos := _get_player_python_pos()
+	var tan_sample := _calc_tan_and_sample(origin, player_pos)
+	var bullet := _spawn_python_bullet(origin, tan_sample.tan_value, tan_sample.sample, 5.0, EnemyBullet.BulletType.ACCELERATE, "res://assets/sprites/bossbullut-1.png")
+	if bullet:
+		bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
+
+# 追踪弹幕（持续追踪）
+func _shoot_homing() -> void:
+	var origin := _python_pos()
+	var player_pos := _get_player_python_pos()
+	var tan_sample := _calc_tan_and_sample(origin, player_pos)
+	var bullet := _spawn_python_bullet(origin, tan_sample.tan_value, tan_sample.sample, 8.0, EnemyBullet.BulletType.HOMING, "res://assets/sprites/bossbullut-11.png")
+	if bullet:
+		bullet.bullet_type = EnemyBullet.BulletType.HOMING
+		bullet._homing_strength = 2.5
+
+# 弹跳弹幕
+func _shoot_bounce() -> void:
+	var origin := _python_pos()
+	# 发射3个弹跳弹
+	for angle_deg in range(-20, 21, 20):
+		var angle_rad := deg_to_rad(float(angle_deg))
+		var tan_value := _safe_tan(angle_rad)
+		var sample := -1 if angle_deg > -90 and angle_deg < 90 else 1
+		var bullet := _spawn_python_bullet(origin, tan_value, sample, 12.0, EnemyBullet.BulletType.BOUNCE, "res://assets/sprites/bossbullut-5.png")
+		if bullet:
+			bullet.bullet_type = EnemyBullet.BulletType.BOUNCE
+			bullet.can_return = true
 
 
 func _spawn_python_bullet(
@@ -870,6 +1137,16 @@ func _safe_tan(angle_rad: float) -> float:
 	if abs(c) < 0.00001:
 		return 1000000.0 * float(sign(sin(angle_rad)))
 	return tan(angle_rad)
+
+
+# 辅助函数：计算朝向玩家的tan值和sample
+func _calc_tan_and_sample(origin: Vector2, player_pos: Vector2) -> Dictionary:
+	var dx := player_pos.x - origin.x
+	var tan_value := 0.0
+	if dx != 0.0:
+		tan_value = (player_pos.y - origin.y) / dx
+	var sample := -1 if dx > 0.0 else 1
+	return {"tan_value": tan_value, "sample": sample}
 
 
 func _get_base_enemy_hp(kind: int) -> int:
