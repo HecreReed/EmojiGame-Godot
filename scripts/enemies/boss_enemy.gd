@@ -2399,7 +2399,7 @@ func _boss1_portal_pattern() -> void:
 		return
 
 	var portal := _boss1_portal_ref as Node2D
-	if not portal or not is_instance_valid(portal):
+	if not portal or not is_instance_valid(portal) or portal.is_queued_for_deletion():
 		return
 
 	var texture_path := "res://assets/sprites/bossbullut-2.png"
@@ -2408,29 +2408,33 @@ func _boss1_portal_pattern() -> void:
 	for wave in range(3):
 		if _pattern_should_abort(token):
 			return
+		portal = _boss1_portal_ref as Node2D
+		if not portal or not is_instance_valid(portal) or portal.is_queued_for_deletion():
+			return
+		var portal_pos := portal.global_position
 
 		var player := _get_player_safe()
 		if player:
-			var to_player := player.global_position - portal.global_position
+			var to_player := player.global_position - portal_pos
 			if to_player.length() == 0.0:
 				to_player = Vector2.LEFT
-			var base_angle := to_player.angle()
-			var spread := 30.0
-			var count := 5
-			for i in range(count):
-				var t := 0.0
-				if count > 1:
-					t = float(i) / float(count - 1)
-				var a := base_angle + deg_to_rad(lerpf(-spread * 0.5, spread * 0.5, t))
-				var dir := Vector2(cos(a), sin(a))
-				_spawn_bullet_at(portal.global_position, dir, base_speed + float(wave) * 40.0, EnemyBullet.BulletType.NORMAL, texture_path)
+				var base_angle := to_player.angle()
+				var spread := 30.0
+				var count := 5
+				for i in range(count):
+					var t := 0.0
+					if count > 1:
+						t = float(i) / float(count - 1)
+					var a := base_angle + deg_to_rad(lerpf(-spread * 0.5, spread * 0.5, t))
+					var dir := Vector2(cos(a), sin(a))
+					_spawn_bullet_at(portal_pos, dir, base_speed + float(wave) * 40.0, EnemyBullet.BulletType.NORMAL, texture_path)
 
 		# Small ring for "portal ambience".
 		var ring_count := 10 + wave * 2
 		for j in range(ring_count):
 			var ang := (TAU / float(ring_count)) * float(j)
 			var dir2 := Vector2(cos(ang), sin(ang))
-			_spawn_bullet_at(portal.global_position, dir2, (6.0 + float(wave) * 0.6) * 60.0, EnemyBullet.BulletType.NORMAL, ring_texture)
+			_spawn_bullet_at(portal_pos, dir2, (6.0 + float(wave) * 0.6) * 60.0, EnemyBullet.BulletType.NORMAL, ring_texture)
 
 		await get_tree().create_timer(0.22).timeout
 
