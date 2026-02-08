@@ -66,6 +66,16 @@ func _ready():
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
 
+func set_sprite(texture_path: String) -> void:
+	if texture_path == "":
+		return
+	var bullet_sprite := get_node_or_null("Sprite2D") as Sprite2D
+	if not bullet_sprite:
+		return
+	var tex := load(texture_path) as Texture2D
+	if tex:
+		bullet_sprite.texture = tex
+
 func _physics_process(delta):
 	var time_stop_now := GameManager.time_stop_active
 	if _was_time_stop_active and not time_stop_now:

@@ -4,6 +4,8 @@ extends Node
 @export var total_frames: int = 600
 
 var _frame: int = 0
+var _kill_boss_at_frame: int = -1
+var _kill_boss_done: bool = false
 
 func _ready() -> void:
 	# Load and run the real main scene under this probe root.
@@ -27,6 +29,12 @@ func _ready() -> void:
 	var stage_start_ratio := 0.60
 	var midboss_enabled_override: Variant = null
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--frames="):
+			total_frames = maxi(1, int(arg.get_slice("=", 1)))
+		if arg.begins_with("--report="):
+			report_every_frames = maxi(1, int(arg.get_slice("=", 1)))
+		if arg.begins_with("--kill-boss-frame="):
+			_kill_boss_at_frame = maxi(1, int(arg.get_slice("=", 1)))
 		if arg.begins_with("--mode="):
 			mode = arg.get_slice("=", 1)
 		if arg.begins_with("--stage="):
@@ -55,6 +63,20 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_frame += 1
+	if not _kill_boss_done and _kill_boss_at_frame > 0 and _frame >= _kill_boss_at_frame:
+		_kill_boss_done = true
+		var boss := get_tree().get_first_node_in_group("boss")
+		if boss and is_instance_valid(boss) and not boss.is_queued_for_deletion():
+			print("probe: killing boss at frame=%d name=%s" % [_frame, str(boss.name)])
+			if boss.has_method("die"):
+				boss.call("die")
+			elif "health" in boss:
+				boss.set("health", 0)
+				if boss.has_method("take_damage"):
+					boss.call("take_damage", 999999)
+			else:
+				boss.queue_free()
+
 	if _frame % report_every_frames == 0:
 		var boss_count := get_tree().get_nodes_in_group("boss").size()
 		var bullet_count := get_tree().get_nodes_in_group("enemy_bullets").size()

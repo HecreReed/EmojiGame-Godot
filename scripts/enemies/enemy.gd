@@ -1139,16 +1139,6 @@ func _safe_tan(angle_rad: float) -> float:
 	return tan(angle_rad)
 
 
-# 辅助函数：计算朝向玩家的tan值和sample
-func _calc_tan_and_sample(origin: Vector2, player_pos: Vector2) -> Dictionary:
-	var dx := player_pos.x - origin.x
-	var tan_value := 0.0
-	if dx != 0.0:
-		tan_value = (player_pos.y - origin.y) / dx
-	var sample := -1 if dx > 0.0 else 1
-	return {"tan_value": tan_value, "sample": sample}
-
-
 func _get_base_enemy_hp(kind: int) -> int:
 	match kind:
 		EnemyKind.BASE_1:

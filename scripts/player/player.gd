@@ -701,6 +701,8 @@ func _crazy_shoot_impl():
 
 	var viewport_height := int(get_viewport_rect().size.y)
 	for _wave in range(20):
+		if not is_instance_valid(self) or not is_inside_tree() or not get_parent():
+			return
 		for y in range(0, viewport_height, 40):
 			var bullet = bullet_scene.instantiate()
 			bullet.global_position = Vector2(global_position.x - 10, float(y) + 10.0)
@@ -708,6 +710,8 @@ func _crazy_shoot_impl():
 			bullet.damage = damage
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.1).timeout
+		if not is_instance_valid(self):
+			return
 
 func use_power_shoot():
 	if is_power_shooting:
@@ -722,6 +726,8 @@ func use_power_shoot():
 
 	var special_texture: Texture2D = load("res://assets/sprites/waterbullut2.png")
 	for _wave in range(30):
+		if not is_instance_valid(self) or not is_inside_tree() or not get_parent():
+			return
 		for y_offset in [50, 25, 0, -25]:
 			var bullet := _spawn_special_bullet(
 				Vector2(-10, float(y_offset) - 10.0),
@@ -736,6 +742,8 @@ func use_power_shoot():
 			if bullet_sprite and special_texture:
 				bullet_sprite.texture = special_texture
 		await get_tree().create_timer(0.1).timeout
+		if not is_instance_valid(self):
+			return
 
 	auto_shoot_enabled = true
 	is_power_shooting = false

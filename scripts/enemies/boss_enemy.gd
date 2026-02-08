@@ -4583,163 +4583,183 @@ func _boss6_apocalypse() -> void:
 
 func _special_butterfly_swarm() -> void:
 	# 蝴蝶弹群
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(12):
 		var angle = (TAU / 12) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 150.0
 		bullet.bullet_type = EnemyBullet.BulletType.BUTTERFLY
 		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 		await get_tree().create_timer(0.1).timeout
 
 func _special_laser_cross() -> void:
 	# 激光十字
+	if not bullet_scene or not get_parent():
+		return
 	var directions = [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]
 	for dir in directions:
 		for i in range(8):
-			var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+			var bullet = bullet_scene.instantiate() as EnemyBullet
 			bullet.global_position = global_position + dir * i * 30
 			bullet.direction = dir
 			bullet.speed = 300.0
 			bullet.bullet_type = EnemyBullet.BulletType.LASER
 			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
-			get_tree().root.add_child(bullet)
+			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.15).timeout
 
 func _special_split_bomb() -> void:
 	# 分裂弹幕
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(8):
 		var angle = (TAU / 8) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 180.0
 		bullet.bullet_type = EnemyBullet.BulletType.SPLIT
 		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 	await get_tree().create_timer(1.5).timeout
 
 func _special_spiral_madness() -> void:
 	# 螺旋狂舞
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(16):
 		var angle = (TAU / 16) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 120.0
 		bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
 		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 		await get_tree().create_timer(0.08).timeout
 
 func _special_homing_hell() -> void:
 	# 追踪地狱
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(15):
 		var angle = randf() * TAU
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 100.0
 		bullet.bullet_type = EnemyBullet.BulletType.HOMING
 		bullet._homing_strength = 3.0
 		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 		await get_tree().create_timer(0.15).timeout
 
 func _special_wave_wall() -> void:
 	# 波浪墙
+	if not bullet_scene or not get_parent():
+		return
 	for wave in range(3):
 		for i in range(10):
 			var x_offset = (i - 5) * 50
-			var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+			var bullet = bullet_scene.instantiate() as EnemyBullet
 			bullet.global_position = global_position + Vector2(x_offset, -100)
 			bullet.direction = Vector2.DOWN
 			bullet.speed = 150.0
 			bullet.bullet_type = EnemyBullet.BulletType.WAVE_SINE if wave % 2 == 0 else EnemyBullet.BulletType.WAVE_COS
 			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
-			get_tree().root.add_child(bullet)
+			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.3).timeout
 
 func _special_accelerate_burst() -> void:
 	# 加速爆发
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(12):
 		var angle = (TAU / 12) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 50.0
 		bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
 		bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 	await get_tree().create_timer(0.5).timeout
 
 func _special_decelerate_trap() -> void:
 	# 减速陷阱
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(16):
 		var angle = (TAU / 16) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 250.0
 		bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
 		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 	await get_tree().create_timer(0.5).timeout
 
 func _special_bounce_chaos() -> void:
 	# 弹跳混沌
+	if not bullet_scene or not get_parent():
+		return
 	for i in range(20):
 		var angle = randf() * TAU
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 200.0
 		bullet.bullet_type = EnemyBullet.BulletType.BOUNCE
 		bullet.can_return = true
 		bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 		await get_tree().create_timer(0.1).timeout
 
 func _special_ultimate_chaos() -> void:
 	# 终极混沌 - 所有特殊子弹类型组合
+	if not bullet_scene or not get_parent():
+		return
 	# 蝴蝶弹
 	for i in range(6):
 		var angle = (TAU / 6) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 150.0
 		bullet.bullet_type = EnemyBullet.BulletType.BUTTERFLY
 		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 
 	await get_tree().create_timer(0.3).timeout
 
 	# 螺旋弹
 	for i in range(8):
 		var angle = (TAU / 8) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 120.0
 		bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
 		bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 
 	await get_tree().create_timer(0.3).timeout
 
 	# 追踪弹
 	for i in range(5):
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(randf() * 2 - 1, randf() * 2 - 1).normalized()
 		bullet.speed = 100.0
 		bullet.bullet_type = EnemyBullet.BulletType.HOMING
 		bullet._homing_strength = 4.0
 		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
 		await get_tree().create_timer(0.2).timeout
 
 	await get_tree().create_timer(0.3).timeout
@@ -4747,10 +4767,10 @@ func _special_ultimate_chaos() -> void:
 	# 分裂弹
 	for i in range(6):
 		var angle = (TAU / 6) * i
-		var bullet = enemy_bullet_scene.instantiate() as EnemyBullet
+		var bullet = bullet_scene.instantiate() as EnemyBullet
 		bullet.global_position = global_position
 		bullet.direction = Vector2(cos(angle), sin(angle))
 		bullet.speed = 180.0
 		bullet.bullet_type = EnemyBullet.BulletType.SPLIT
 		bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
-		get_tree().root.add_child(bullet)
+		get_parent().add_child(bullet)
