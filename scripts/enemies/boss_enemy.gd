@@ -839,7 +839,7 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 			]
 			spell2_pool = [
 				Callable(self, "_boss6_fire_serpent"),
-				Callable(self, "_boss6_horizontal_laser"),
+				Callable(self, "_boss6_horizontal_laser_pattern"),
 				Callable(self, "_boss6_galaxy_burst"),
 				Callable(self, "_special_laser_cross"),
 				Callable(self, "_special_accelerate_burst"),
@@ -1890,6 +1890,14 @@ func _boss6_teleport() -> void:
 		randf_range(120.0, maxf(120.0, playfield_bottom * 0.55))
 	)
 	skill_invulnerable_until = (Time.get_ticks_msec() / 1000.0) + 0.35
+
+func _boss6_horizontal_laser_pattern() -> void:
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+	@warning_ignore("redundant_await")
+	await _boss6_horizontal_laser(playfield_bottom)
 
 func _boss6_horizontal_laser(playfield_bottom: float) -> void:
 	var viewport_size := get_viewport_rect().size
