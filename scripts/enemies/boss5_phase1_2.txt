@@ -1,0 +1,510 @@
+# ============================================================================
+# Boss 5 - Demolition Barrage (Nonspell 1) -- 5 skills
+# Theme: Explosion/Demolition - aggressive shrapnel, cluster bombs, mortar fire
+# ============================================================================
+
+func _boss5_shrapnel_burst() -> void:
+	# Rapid aimed bursts at player: 6 rounds of 15-bullet aimed fans with SPLIT
+	# bullets mixed in (every 3rd is SPLIT). Between rounds, fire 8 ACCELERATE
+	# bullets at player. Fast 0.03s between bullets for relentless pressure.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for round_i in range(6):
+		if not is_inside_tree():
+			break
+		# --- 15-bullet aimed fan with SPLIT every 3rd bullet ---
+		var aim = global_position.direction_to(player.global_position).angle()
+		for i in range(15):
+			if not is_inside_tree():
+				break
+			var spread = aim + (i - 7.0) * 0.09
+			var is_split = (i % 3 == 0)
+			var b = bullet_scene.instantiate() as EnemyBullet
+			b.global_position = global_position
+			b.direction = Vector2(cos(spread), sin(spread))
+			b.speed = 310.0 + i * 5.0
+			if is_split:
+				b.bullet_type = EnemyBullet.BulletType.SPLIT
+				b.set_sprite("res://assets/sprites/bossbullut-6.png")
+			else:
+				b.set_sprite("res://assets/sprites/bossbullut-14.png")
+			get_parent().add_child(b)
+			await get_tree().create_timer(0.03).timeout
+		# --- 8 ACCELERATE bullets aimed at player between rounds ---
+		if player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for j in range(8):
+				var spread2 = aim2 + (j - 3.5) * 0.06
+				var acc_b = bullet_scene.instantiate() as EnemyBullet
+				acc_b.global_position = global_position
+				acc_b.direction = Vector2(cos(spread2), sin(spread2))
+				acc_b.speed = 240.0
+				acc_b.bullet_type = EnemyBullet.BulletType.ACCELERATE
+				acc_b.acceleration = 280.0
+				acc_b.set_sprite("res://assets/sprites/bossbullut-6.png")
+				get_parent().add_child(acc_b)
+		await get_tree().create_timer(0.10).timeout
+
+
+func _boss5_cluster_bomb() -> void:
+	# Fire 8 large SPLIT bullets aimed at player in a wide fan. Each splits into
+	# 3 after ~1 second. Between clusters, fire HOMING from boss. 4 cluster rounds
+	# total for dense explosive coverage.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for round_i in range(4):
+		if not is_inside_tree():
+			break
+		# --- 8 SPLIT bullets in wide fan aimed at player ---
+		var aim = global_position.direction_to(player.global_position).angle()
+		for i in range(8):
+			var spread = aim + (i - 3.5) * 0.18
+			var cluster = bullet_scene.instantiate() as EnemyBullet
+			cluster.global_position = global_position
+			cluster.direction = Vector2(cos(spread), sin(spread))
+			cluster.speed = 220.0 + round_i * 15.0
+			cluster.bullet_type = EnemyBullet.BulletType.SPLIT
+			cluster.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(cluster)
+			await get_tree().create_timer(0.04).timeout
+		# --- 6 HOMING bullets from boss between clusters ---
+		if player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for h in range(6):
+				var h_angle = aim2 + (h - 2.5) * 0.25
+				var homing_b = bullet_scene.instantiate() as EnemyBullet
+				homing_b.global_position = global_position
+				homing_b.direction = Vector2(cos(h_angle), sin(h_angle))
+				homing_b.speed = 280.0
+				homing_b.bullet_type = EnemyBullet.BulletType.HOMING
+				homing_b._homing_strength = 2.5
+				homing_b._homing_duration = 0.7
+				homing_b.set_sprite("res://assets/sprites/bossbullut-5.png")
+				get_parent().add_child(homing_b)
+		await get_tree().create_timer(0.12).timeout
+
+
+func _boss5_mortar_rain() -> void:
+	# Dense rain from top of screen aimed at player position. 8 waves of 15
+	# ACCELERATE bullets (start slow 120, acceleration 200). Between waves,
+	# aimed fan from boss (10 bullets). 0.02s between rain bullets for density.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	var vp = get_viewport_rect().size
+	for wave in range(8):
+		if not is_inside_tree():
+			break
+		var target_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- 15 ACCELERATE bullets raining from top toward player ---
+		for i in range(15):
+			if not is_inside_tree():
+				break
+			var spawn_x = target_pos.x + randf_range(-200, 200)
+			spawn_x = clamp(spawn_x, 30, vp.x - 30)
+			var spawn_pos = Vector2(spawn_x, randf_range(-15, 10))
+			var rain = bullet_scene.instantiate() as EnemyBullet
+			rain.global_position = spawn_pos
+			rain.direction = (target_pos - spawn_pos).normalized().rotated(randf_range(-0.10, 0.10))
+			rain.speed = 120.0
+			rain.bullet_type = EnemyBullet.BulletType.ACCELERATE
+			rain.acceleration = 200.0
+			rain.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(rain)
+			await get_tree().create_timer(0.02).timeout
+		# --- 10-bullet aimed fan from boss between waves ---
+		if player and is_instance_valid(player):
+			var aim = global_position.direction_to(player.global_position).angle()
+			for j in range(10):
+				var spread = aim + (j - 4.5) * 0.11
+				var fan_b = bullet_scene.instantiate() as EnemyBullet
+				fan_b.global_position = global_position
+				fan_b.direction = Vector2(cos(spread), sin(spread))
+				fan_b.speed = 340.0 + j * 8.0
+				fan_b.set_sprite("res://assets/sprites/bossbullut-14.png")
+				get_parent().add_child(fan_b)
+		await get_tree().create_timer(0.08).timeout
+
+
+func _boss5_grenade_scatter() -> void:
+	# Bullets spawn at random positions near player (within 250px radius), then
+	# explode outward in mini-rings of 8 bullets each. 20 "grenades" total in
+	# rapid succession. Each grenade = 1 DECELERATE bullet that stops, then 8
+	# normal bullets burst outward from that position.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	for g in range(20):
+		if not is_inside_tree():
+			break
+		var target_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- Grenade spawns near player at random offset ---
+		var offset = Vector2(randf_range(-250, 250), randf_range(-250, 250))
+		var grenade_pos = target_pos + offset
+		grenade_pos.x = clamp(grenade_pos.x, 30, vp.x - 30)
+		grenade_pos.y = clamp(grenade_pos.y, 30, vp.y - 30)
+		# --- DECELERATE grenade bullet that stops at position ---
+		var grenade = bullet_scene.instantiate() as EnemyBullet
+		grenade.global_position = global_position
+		grenade.direction = (grenade_pos - global_position).normalized()
+		grenade.speed = 350.0
+		grenade.bullet_type = EnemyBullet.BulletType.DECELERATE
+		grenade.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_parent().add_child(grenade)
+		# --- 8 normal bullets burst outward from grenade position ---
+		for k in range(8):
+			var burst_angle = (TAU / 8.0) * k + randf_range(-0.1, 0.1)
+			var burst = bullet_scene.instantiate() as EnemyBullet
+			burst.global_position = grenade_pos
+			burst.direction = Vector2(cos(burst_angle), sin(burst_angle))
+			burst.speed = 260.0 + randf_range(-30, 30)
+			burst.start_delay = 0.5 + randf_range(0.0, 0.2)
+			burst.set_sprite("res://assets/sprites/bossbullut-14.png")
+			get_parent().add_child(burst)
+		await get_tree().create_timer(0.06).timeout
+
+
+func _boss5_dynamite_chain() -> void:
+	# Chain of aimed bursts from boss: simulated via 5 positions along the line
+	# from boss to player, each firing a 10-bullet aimed fan at player. 3 chain
+	# rounds total. Creates a cascading explosion effect along the trajectory.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for chain in range(3):
+		if not is_inside_tree():
+			break
+		var target_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		var line_dir = (target_pos - global_position)
+		var line_len = line_dir.length()
+		var line_norm = line_dir.normalized()
+		# --- 5 detonation points along boss-to-player line ---
+		for p in range(5):
+			if not is_inside_tree():
+				break
+			var frac = (p + 1.0) / 6.0
+			var det_pos = global_position + line_norm * line_len * frac
+			# --- 10-bullet aimed fan from each detonation point ---
+			var aim = (target_pos - det_pos).normalized().angle()
+			for i in range(10):
+				var spread = aim + (i - 4.5) * 0.13
+				var det_b = bullet_scene.instantiate() as EnemyBullet
+				det_b.global_position = det_pos
+				det_b.direction = Vector2(cos(spread), sin(spread))
+				det_b.speed = 280.0 + p * 20.0
+				if i % 3 == 0:
+					det_b.bullet_type = EnemyBullet.BulletType.SPLIT
+					det_b.set_sprite("res://assets/sprites/bossbullut-6.png")
+				else:
+					det_b.set_sprite("res://assets/sprites/bossbullut-14.png")
+				get_parent().add_child(det_b)
+			await get_tree().create_timer(0.07).timeout
+		await get_tree().create_timer(0.12).timeout
+
+
+# ============================================================================
+# Boss 5 - Vampiric Drain (Spell 1) -- 5 skills
+# Theme: 吸血 drain/pull - bullets converge, orbit inward, suction effects
+# ============================================================================
+
+func _boss5_blood_drain() -> void:
+	# DECELERATE bullets fired outward from boss in rings, they stop mid-screen,
+	# then ALL re-aim and converge on player position (the "drain" effect).
+	# 4 rings of 24 bullets. Between rings, HOMING "blood" bullets from screen
+	# edges (6 per ring) for additional pressure.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	for ring in range(4):
+		if not is_inside_tree():
+			break
+		# --- 24 DECELERATE bullets in ring from boss (stop, then re-aim) ---
+		for i in range(24):
+			var angle = (TAU / 24.0) * i + ring * 0.13
+			var drain_b = bullet_scene.instantiate() as EnemyBullet
+			drain_b.global_position = global_position
+			drain_b.direction = Vector2(cos(angle), sin(angle))
+			drain_b.speed = 300.0
+			drain_b.bullet_type = EnemyBullet.BulletType.DECELERATE
+			drain_b.set_sprite("res://assets/sprites/bossbullut-2.png")
+			get_parent().add_child(drain_b)
+		await get_tree().create_timer(0.10).timeout
+		# --- 6 HOMING "blood" bullets from screen edges ---
+		if player and is_instance_valid(player):
+			var edge_positions: Array[Vector2] = [
+				Vector2(randf_range(50, vp.x - 50), 10),
+				Vector2(randf_range(50, vp.x - 50), vp.y - 10),
+				Vector2(10, randf_range(50, vp.y - 50)),
+				Vector2(vp.x - 10, randf_range(50, vp.y - 50)),
+				Vector2(randf_range(50, vp.x - 50), 10),
+				Vector2(10, randf_range(50, vp.y - 50)),
+			]
+			for e in range(6):
+				var edge_b = bullet_scene.instantiate() as EnemyBullet
+				edge_b.global_position = edge_positions[e]
+				var aim = edge_positions[e].direction_to(player.global_position).angle()
+				edge_b.direction = Vector2(cos(aim), sin(aim))
+				edge_b.speed = 260.0
+				edge_b.bullet_type = EnemyBullet.BulletType.HOMING
+				edge_b._homing_strength = 2.8
+				edge_b._homing_duration = 0.8
+				edge_b.set_sprite("res://assets/sprites/bossbullut-7.png")
+				get_parent().add_child(edge_b)
+		await get_tree().create_timer(0.12).timeout
+
+
+func _boss5_life_siphon() -> void:
+	# Orbit bullets spawn around player at radius 200, orbit inward (decreasing
+	# radius via multiple spawn waves at 200, 160, 120, 80), then dash at player.
+	# Creates a "siphoning" vortex. 4 layers x 12 bullets. Between layers, aimed
+	# LASER from boss for additional threat.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var radii = [200.0, 160.0, 120.0, 80.0]
+	for layer in range(4):
+		if not is_inside_tree():
+			break
+		if not player or not is_instance_valid(player):
+			break
+		var target = player.global_position
+		var radius = radii[layer]
+		# --- 12 orbit bullets at current radius, spiraling inward ---
+		for i in range(12):
+			var angle = (TAU / 12.0) * i + layer * 0.26
+			var siphon = bullet_scene.instantiate() as EnemyBullet
+			siphon.global_position = target + Vector2(cos(angle), sin(angle)) * radius
+			siphon.direction = Vector2.ZERO
+			siphon.speed = 0.0
+			siphon.orbit_center = target
+			siphon.orbit_radius = radius
+			siphon.orbit_angle = angle
+			siphon.orbit_angular_speed = 2.2 + layer * 0.4
+			siphon.orbit_time_left = 1.5 - layer * 0.25
+			siphon.dash_after_orbit = true
+			siphon.dash_target = target
+			siphon.dash_speed = 360.0
+			siphon.set_sprite("res://assets/sprites/bossbullut-2.png")
+			get_parent().add_child(siphon)
+		await get_tree().create_timer(0.08).timeout
+		# --- Aimed LASER from boss between layers ---
+		if player and is_instance_valid(player):
+			var aim = global_position.direction_to(player.global_position).angle()
+			for l in range(3):
+				var l_spread = aim + (l - 1.0) * 0.08
+				var laser = bullet_scene.instantiate() as EnemyBullet
+				laser.global_position = global_position
+				laser.direction = Vector2(cos(l_spread), sin(l_spread))
+				laser.speed = 520.0
+				laser.bullet_type = EnemyBullet.BulletType.LASER
+				laser.set_sprite("res://assets/sprites/bossbullut-11.png")
+				get_parent().add_child(laser)
+		await get_tree().create_timer(0.12).timeout
+
+
+func _boss5_soul_harvest() -> void:
+	# Bullets from ALL 4 screen edges + 4 corners (8 sources) all converge on
+	# player simultaneously. 8 sources x 8 bullets each x 3 waves. Mix of normal
+	# and HOMING. Creates overwhelming convergence from every direction.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	for wave in range(3):
+		if not is_inside_tree():
+			break
+		var target = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- 8 source positions: 4 edges + 4 corners ---
+		var sources: Array[Vector2] = [
+			Vector2(target.x, 5),                    # top
+			Vector2(target.x, vp.y - 5),             # bottom
+			Vector2(5, target.y),                     # left
+			Vector2(vp.x - 5, target.y),             # right
+			Vector2(15, 15),                          # top-left
+			Vector2(vp.x - 15, 15),                  # top-right
+			Vector2(15, vp.y - 15),                   # bottom-left
+			Vector2(vp.x - 15, vp.y - 15),           # bottom-right
+		]
+		for s in range(8):
+			if not is_inside_tree():
+				break
+			var src = sources[s]
+			for i in range(8):
+				var aim = src.direction_to(target).angle() + (i - 3.5) * 0.08
+				var soul = bullet_scene.instantiate() as EnemyBullet
+				soul.global_position = src + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+				soul.direction = Vector2(cos(aim), sin(aim))
+				soul.speed = 280.0 + wave * 25.0
+				if i % 3 == 0:
+					soul.bullet_type = EnemyBullet.BulletType.HOMING
+					soul._homing_strength = 2.2
+					soul._homing_duration = 0.6
+					soul.set_sprite("res://assets/sprites/bossbullut-7.png")
+				else:
+					soul.set_sprite("res://assets/sprites/bossbullut-2.png")
+				get_parent().add_child(soul)
+			await get_tree().create_timer(0.03).timeout
+		await get_tree().create_timer(0.15).timeout
+
+
+func _boss5_crimson_vortex() -> void:
+	# CURVE bullets fired in rings from boss that curve TOWARD player (turn_rate
+	# aimed inward). 6 rings of 20 curve bullets. Between rings, DECELERATE traps
+	# around player position (8 per ring) to restrict movement.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for ring in range(6):
+		if not is_inside_tree():
+			break
+		var target = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- 20 CURVE bullets in ring, curving toward player ---
+		for i in range(20):
+			var angle = (TAU / 20.0) * i + ring * 0.16
+			var curve_b = bullet_scene.instantiate() as EnemyBullet
+			curve_b.global_position = global_position
+			curve_b.direction = Vector2(cos(angle), sin(angle))
+			curve_b.speed = 250.0 + ring * 15.0
+			curve_b.bullet_type = EnemyBullet.BulletType.CURVE
+			# Turn rate aimed inward toward player
+			var to_player = (target - global_position).angle()
+			var diff = angle - to_player
+			curve_b.turn_rate = -sign(sin(diff)) * (1.8 + ring * 0.2)
+			curve_b.set_sprite("res://assets/sprites/bossbullut-2.png")
+			get_parent().add_child(curve_b)
+		await get_tree().create_timer(0.06).timeout
+		# --- 8 DECELERATE traps around player position ---
+		if player and is_instance_valid(player):
+			var trap_target = player.global_position
+			for t in range(8):
+				var trap_angle = (TAU / 8.0) * t + ring * 0.4
+				var trap_pos = trap_target + Vector2(cos(trap_angle), sin(trap_angle)) * 130.0
+				var trap = bullet_scene.instantiate() as EnemyBullet
+				trap.global_position = trap_pos
+				trap.direction = Vector2(cos(trap_angle + PI), sin(trap_angle + PI))
+				trap.speed = 180.0
+				trap.bullet_type = EnemyBullet.BulletType.DECELERATE
+				trap.set_sprite("res://assets/sprites/bossbullut-10.png")
+				get_parent().add_child(trap)
+		await get_tree().create_timer(0.10).timeout
+
+
+func _boss5_essence_steal() -> void:
+	# Multi-phase drain: Phase 1 - orbit cage around player (16 bullets, dash
+	# inward). Phase 2 - DECELERATE ring from player position outward then stops.
+	# Phase 3 - HOMING from all edges. Phase 4 - aimed ACCELERATE barrage from
+	# boss. Everything converges on player for maximum drain pressure.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	var target = player.global_position
+
+	# === PHASE 1: Orbit cage around player (16 bullets, dash inward) ===
+	for i in range(16):
+		if not is_inside_tree():
+			break
+		var angle = (TAU / 16.0) * i
+		var cage = bullet_scene.instantiate() as EnemyBullet
+		cage.global_position = target + Vector2(cos(angle), sin(angle)) * 220.0
+		cage.direction = Vector2.ZERO
+		cage.speed = 0.0
+		cage.orbit_center = target
+		cage.orbit_radius = 220.0
+		cage.orbit_angle = angle
+		cage.orbit_angular_speed = 1.8
+		cage.orbit_time_left = 2.0
+		cage.dash_after_orbit = true
+		cage.dash_target = target
+		cage.dash_speed = 400.0
+		cage.set_sprite("res://assets/sprites/bossbullut-2.png")
+		get_parent().add_child(cage)
+	await get_tree().create_timer(0.15).timeout
+
+	# === PHASE 2: DECELERATE ring from player position ===
+	if player and is_instance_valid(player):
+		target = player.global_position
+	for i in range(16):
+		if not is_inside_tree():
+			break
+		var angle = (TAU / 16.0) * i + 0.2
+		var decel = bullet_scene.instantiate() as EnemyBullet
+		decel.global_position = target
+		decel.direction = Vector2(cos(angle), sin(angle))
+		decel.speed = 280.0
+		decel.bullet_type = EnemyBullet.BulletType.DECELERATE
+		decel.set_sprite("res://assets/sprites/bossbullut-10.png")
+		get_parent().add_child(decel)
+	await get_tree().create_timer(0.12).timeout
+
+	# === PHASE 3: HOMING from all edges (12 bullets) ===
+	if player and is_instance_valid(player):
+		target = player.global_position
+		var edge_spawns: Array[Vector2] = [
+			Vector2(randf_range(50, vp.x - 50), 5),
+			Vector2(randf_range(50, vp.x - 50), 5),
+			Vector2(randf_range(50, vp.x - 50), 5),
+			Vector2(randf_range(50, vp.x - 50), vp.y - 5),
+			Vector2(randf_range(50, vp.x - 50), vp.y - 5),
+			Vector2(randf_range(50, vp.x - 50), vp.y - 5),
+			Vector2(5, randf_range(50, vp.y - 50)),
+			Vector2(5, randf_range(50, vp.y - 50)),
+			Vector2(5, randf_range(50, vp.y - 50)),
+			Vector2(vp.x - 5, randf_range(50, vp.y - 50)),
+			Vector2(vp.x - 5, randf_range(50, vp.y - 50)),
+			Vector2(vp.x - 5, randf_range(50, vp.y - 50)),
+		]
+		for e in range(12):
+			if not is_inside_tree():
+				break
+			var hb = bullet_scene.instantiate() as EnemyBullet
+			hb.global_position = edge_spawns[e]
+			var aim = edge_spawns[e].direction_to(target).angle()
+			hb.direction = Vector2(cos(aim), sin(aim))
+			hb.speed = 300.0
+			hb.bullet_type = EnemyBullet.BulletType.HOMING
+			hb._homing_strength = 3.0
+			hb._homing_duration = 0.7
+			hb.set_sprite("res://assets/sprites/bossbullut-7.png")
+			get_parent().add_child(hb)
+			await get_tree().create_timer(0.03).timeout
+	await get_tree().create_timer(0.10).timeout
+
+	# === PHASE 4: Aimed ACCELERATE barrage from boss (20 bullets) ===
+	if player and is_instance_valid(player):
+		var aim = global_position.direction_to(player.global_position).angle()
+		for i in range(20):
+			if not is_inside_tree():
+				break
+			var spread = aim + (i - 9.5) * 0.06
+			var acc = bullet_scene.instantiate() as EnemyBullet
+			acc.global_position = global_position
+			acc.direction = Vector2(cos(spread), sin(spread))
+			acc.speed = 200.0
+			acc.bullet_type = EnemyBullet.BulletType.ACCELERATE
+			acc.acceleration = 250.0
+			acc.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(acc)
+			await get_tree().create_timer(0.02).timeout

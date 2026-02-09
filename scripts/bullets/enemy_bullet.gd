@@ -54,6 +54,9 @@ var _butterfly_time: float = 0.0  # 蝴蝶弹计时器
 var _homing_strength: float = 2.0  # 追踪强度
 var _homing_duration: float = 1.0  # 追踪持续时间（秒）
 var _homing_finished: bool = false  # 追踪是否结束
+var _decel_stopped_time: float = -1.0  # 减速弹停止后的计时 (-1 = 还没停)
+var _decel_initial_speed: float = 0.0  # 减速弹的初始速度（用于重新发射）
+var _decel_re_aimed: bool = false  # 是否已经重新瞄准
 
 # Orbit (Touhou-like gimmick): keep the bullet circling for a while, then optionally dash.
 var orbit_center: Vector2 = Vector2.ZERO
@@ -135,8 +138,19 @@ func _physics_process(delta):
 					position += direction * speed * delta
 
 				BulletType.DECELERATE:
-					# 减速弹
-					speed = maxf(0.0, speed - 150.0 * delta)
+					# 减速弹 - 停止后1秒重新瞄准玩家射击
+					if not _decel_re_aimed:
+						if _decel_initial_speed == 0.0:
+							_decel_initial_speed = speed
+						speed = maxf(0.0, speed - 150.0 * delta)
+						if speed <= 0.0:
+							if _decel_stopped_time < 0.0:
+								_decel_stopped_time = 0.0
+							_decel_stopped_time += delta
+							if _decel_stopped_time >= 1.0:
+								aim_at_player()
+								speed = maxf(_decel_initial_speed * 0.8, 180.0)
+								_decel_re_aimed = true
 					position += direction * speed * delta
 
 				BulletType.BOUNCE:

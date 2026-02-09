@@ -1,0 +1,346 @@
+
+# =============================================================================
+# FINAL PHASE - Cataclysm (5 super skills) - Boss 1 Desert/Egyptian Theme
+# =============================================================================
+
+func _boss1_desert_apocalypse() -> void:
+	# Super multi-phase: sand rain -> laser strikes -> aimed fan -> decelerate trap
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+
+	# Phase 1: Dense sand rain from top of screen, angled toward player
+	for i in range(30):
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		var x_pos = randf_range(80.0, 820.0)
+		bullet.global_position = Vector2(x_pos, 40.0)
+		var to_player = Vector2(x_pos, 40.0).direction_to(player.global_position)
+		var drift = Vector2(randf_range(-0.15, 0.15), 0)
+		bullet.direction = (to_player + drift).normalized()
+		bullet.speed = randf_range(180.0, 260.0)
+		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+		bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
+		get_parent().add_child(bullet)
+		if i % 5 == 4:
+			await get_tree().create_timer(0.02).timeout
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 2: 5 rapid LASER strikes aimed at player
+	for i in range(5):
+		var aim = global_position.direction_to(player.global_position).angle()
+		var spread = (i - 2) * 0.08
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(aim + spread), sin(aim + spread))
+		bullet.speed = 320.0
+		bullet.bullet_type = EnemyBullet.BulletType.LASER
+		bullet.set_sprite("res://assets/sprites/bossbullut-11.png")
+		get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 3: 20-bullet aimed fan burst
+	var aim_angle = global_position.direction_to(player.global_position).angle()
+	for i in range(20):
+		var fan_spread = aim_angle + (i - 9.5) * 0.09
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(fan_spread), sin(fan_spread))
+		bullet.speed = 240.0
+		bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+		get_parent().add_child(bullet)
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 4: DECELERATE ring trap spawned around player position
+	var trap_center = player.global_position
+	for i in range(24):
+		var angle = (TAU / 24.0) * i
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = trap_center
+		bullet.direction = Vector2(cos(angle), sin(angle))
+		bullet.speed = 200.0
+		bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+		bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+		get_parent().add_child(bullet)
+
+func _boss1_cosmic_mirage() -> void:
+	# Super summoning + trapping: decelerate traps, homing orbs, sine snakes
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+
+	var corners = [
+		Vector2(60.0, 60.0),
+		Vector2(840.0, 60.0),
+		Vector2(60.0, 540.0),
+		Vector2(840.0, 540.0)
+	]
+
+	for cycle in range(4):
+		# Attack A: DECELERATE ring trap centered on player
+		var trap_pos = player.global_position
+		for i in range(16):
+			var angle = (TAU / 16.0) * i + cycle * 0.2
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = trap_pos
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 180.0
+			bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			get_parent().add_child(bullet)
+
+		await get_tree().create_timer(0.06).timeout
+
+		# Attack B: HOMING orbs from all 4 corners
+		for corner in corners:
+			var aim = corner.direction_to(player.global_position)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = corner
+			bullet.direction = aim
+			bullet.speed = 160.0
+			bullet.bullet_type = EnemyBullet.BulletType.HOMING
+			bullet._homing_strength = 2.0
+			bullet._homing_duration = 0.6
+			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(bullet)
+
+		await get_tree().create_timer(0.06).timeout
+
+		# Attack C: SINE_WAVE snake stream from boss aimed at player
+		var snake_aim = global_position.direction_to(player.global_position).angle()
+		for seg in range(14):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			var wobble = sin(seg * 0.6) * 0.15
+			bullet.direction = Vector2(cos(snake_aim + wobble), sin(snake_aim + wobble))
+			bullet.speed = 200.0 + seg * 4.0
+			bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+			bullet.wave_amplitude = 40.0
+			bullet.wave_frequency = 3.5
+			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+			get_parent().add_child(bullet)
+			await get_tree().create_timer(0.02).timeout
+
+		await get_tree().create_timer(0.08).timeout
+
+func _boss1_eternal_storm() -> void:
+	# Super spiral + laser + gravity: triple spiral arms with laser and gravity overlays
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+
+	for step in range(80):
+		# Triple SPIRAL arms rotating outward
+		for arm in range(3):
+			var base_angle = step * 0.12 + arm * (TAU / 3.0)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(base_angle), sin(base_angle))
+			bullet.speed = 150.0 + step * 0.5
+			bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
+			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+			get_parent().add_child(bullet)
+
+		# Every 8 steps: fire a LASER aimed at player
+		if step % 8 == 0:
+			var laser_aim = global_position.direction_to(player.global_position).angle()
+			var laser = bullet_scene.instantiate() as EnemyBullet
+			laser.global_position = global_position
+			laser.direction = Vector2(cos(laser_aim), sin(laser_aim))
+			laser.speed = 340.0
+			laser.bullet_type = EnemyBullet.BulletType.LASER
+			laser.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(laser)
+
+		# Every 12 steps: fire DECELERATE gravity ring (12 bullets)
+		if step % 12 == 0:
+			for g in range(12):
+				var g_angle = (TAU / 12.0) * g + step * 0.05
+				var grav = bullet_scene.instantiate() as EnemyBullet
+				grav.global_position = global_position
+				grav.direction = Vector2(cos(g_angle), sin(g_angle))
+				grav.speed = 170.0
+				grav.bullet_type = EnemyBullet.BulletType.DECELERATE
+				grav.set_sprite("res://assets/sprites/bossbullut-10.png")
+				get_parent().add_child(grav)
+
+		await get_tree().create_timer(0.03).timeout
+
+func _boss1_void_serpent() -> void:
+	# Super summoning + multi-source: 3 giant sine snakes + aimed bursts + edge homing
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+
+	var snake_dirs = [-0.5, 0.0, 0.5]
+	var edge_spawns = [
+		Vector2(60.0, 300.0),
+		Vector2(840.0, 300.0),
+		Vector2(450.0, 60.0),
+		Vector2(450.0, 540.0)
+	]
+
+	# Fire 3 giant curving snakes interleaved with aimed bursts and homing
+	for seg in range(80):
+		# Snake bullets: 3 streams with decreasing speed for coiling effect
+		for s in range(3):
+			var base_aim = global_position.direction_to(player.global_position).angle()
+			var offset_angle = base_aim + snake_dirs[s]
+			var wobble = sin(seg * 0.5 + s * 2.0) * 0.25
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(offset_angle + wobble), sin(offset_angle + wobble))
+			bullet.speed = 220.0 - seg * 1.5
+			if bullet.speed < 60.0:
+				bullet.speed = 60.0
+			bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+			bullet.wave_amplitude = 35.0 + s * 10.0
+			bullet.wave_frequency = 3.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+			get_parent().add_child(bullet)
+
+		# Every 10 segments: aimed burst at player (10 bullets)
+		if seg % 10 == 5:
+			var aim = global_position.direction_to(player.global_position).angle()
+			for b in range(10):
+				var fan = aim + (b - 4.5) * 0.1
+				var burst = bullet_scene.instantiate() as EnemyBullet
+				burst.global_position = global_position
+				burst.direction = Vector2(cos(fan), sin(fan))
+				burst.speed = 250.0
+				burst.set_sprite("res://assets/sprites/bossbullut-5.png")
+				get_parent().add_child(burst)
+
+		# Every 16 segments: homing bullets from screen edges
+		if seg % 16 == 0:
+			for edge in edge_spawns:
+				var hb = bullet_scene.instantiate() as EnemyBullet
+				hb.global_position = edge
+				hb.direction = edge.direction_to(player.global_position)
+				hb.speed = 140.0
+				hb.bullet_type = EnemyBullet.BulletType.HOMING
+				hb._homing_strength = 2.0
+				hb._homing_duration = 0.6
+				hb.set_sprite("res://assets/sprites/bossbullut-6.png")
+				get_parent().add_child(hb)
+
+		await get_tree().create_timer(0.03).timeout
+
+func _boss1_cataclysm() -> void:
+	# THE ULTIMATE ATTACK - all elements combined in 5 rapid phases
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+
+	# Phase 1: Sand rain from top + aimed fan at player
+	for i in range(30):
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		var x_pos = randf_range(80.0, 820.0)
+		bullet.global_position = Vector2(x_pos, 40.0)
+		var to_player = Vector2(x_pos, 40.0).direction_to(player.global_position)
+		bullet.direction = (to_player + Vector2(randf_range(-0.1, 0.1), 0)).normalized()
+		bullet.speed = randf_range(200.0, 280.0)
+		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+		bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
+		get_parent().add_child(bullet)
+		if i % 6 == 5:
+			await get_tree().create_timer(0.02).timeout
+	# Simultaneous aimed fan
+	var aim1 = global_position.direction_to(player.global_position).angle()
+	for i in range(16):
+		var fan = aim1 + (i - 7.5) * 0.1
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(fan), sin(fan))
+		bullet.speed = 230.0
+		bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+		get_parent().add_child(bullet)
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 2: Lightning LASER spiral (24 lasers in spiral pattern)
+	for i in range(24):
+		var spiral_angle = i * (TAU / 24.0) + i * 0.15
+		var laser = bullet_scene.instantiate() as EnemyBullet
+		laser.global_position = global_position
+		laser.direction = Vector2(cos(spiral_angle), sin(spiral_angle))
+		laser.speed = 300.0
+		laser.bullet_type = EnemyBullet.BulletType.LASER
+		laser.set_sprite("res://assets/sprites/bossbullut-11.png")
+		get_parent().add_child(laser)
+		await get_tree().create_timer(0.02).timeout
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 3: Snake SINE_WAVE stream aimed at player (40 bullets)
+	var snake_aim = global_position.direction_to(player.global_position).angle()
+	for i in range(40):
+		var wobble = sin(i * 0.4) * 0.2
+		var bullet = bullet_scene.instantiate() as EnemyBullet
+		bullet.global_position = global_position
+		bullet.direction = Vector2(cos(snake_aim + wobble), sin(snake_aim + wobble))
+		bullet.speed = 210.0 + i * 1.5
+		bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+		bullet.wave_amplitude = 45.0
+		bullet.wave_frequency = 4.0
+		bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+		get_parent().add_child(bullet)
+		if i % 4 == 3:
+			await get_tree().create_timer(0.02).timeout
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 4: Gravity DECELERATE ring (32 bullets expanding from boss)
+	for i in range(32):
+		var angle = (TAU / 32.0) * i
+		var grav = bullet_scene.instantiate() as EnemyBullet
+		grav.global_position = global_position
+		grav.direction = Vector2(cos(angle), sin(angle))
+		grav.speed = 190.0
+		grav.bullet_type = EnemyBullet.BulletType.DECELERATE
+		grav.set_sprite("res://assets/sprites/bossbullut-10.png")
+		get_parent().add_child(grav)
+
+	await get_tree().create_timer(0.08).timeout
+
+	# Phase 5: Final HOMING burst - 16 from boss + 4 from screen edges
+	var aim5 = global_position.direction_to(player.global_position).angle()
+	for i in range(16):
+		var spread = aim5 + (i - 7.5) * 0.12
+		var homing = bullet_scene.instantiate() as EnemyBullet
+		homing.global_position = global_position
+		homing.direction = Vector2(cos(spread), sin(spread))
+		homing.speed = 170.0
+		homing.bullet_type = EnemyBullet.BulletType.HOMING
+		homing._homing_strength = 2.0
+		homing._homing_duration = 0.6
+		homing.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_parent().add_child(homing)
+	# Edge homing reinforcements
+	var edges = [
+		Vector2(60.0, 300.0), Vector2(840.0, 300.0),
+		Vector2(450.0, 60.0), Vector2(450.0, 540.0)
+	]
+	for edge in edges:
+		var hb = bullet_scene.instantiate() as EnemyBullet
+		hb.global_position = edge
+		hb.direction = edge.direction_to(player.global_position)
+		hb.speed = 180.0
+		hb.bullet_type = EnemyBullet.BulletType.HOMING
+		hb._homing_strength = 2.0
+		hb._homing_duration = 0.6
+		hb.set_sprite("res://assets/sprites/bossbullut-6.png")
+		get_parent().add_child(hb)

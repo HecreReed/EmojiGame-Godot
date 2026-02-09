@@ -1,0 +1,471 @@
+# ============================================================================
+# Boss 2 - Heart Rain (Nonspell 2) -- 5 skills
+# ============================================================================
+
+func _boss2_valentine_storm() -> void:
+	# Dense heart rain from top with random x-drift. Every other wave adds 8
+	# BOUNCE bullets from left/right edges that ricochet across the screen.
+	# Pink rain + red bouncing hearts = beautiful valentine chaos.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	var vp = get_viewport_rect().size
+	for wave in range(8):
+		# --- 25 heart rain bullets falling from top with slight x-drift ---
+		for i in range(25):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			var x_pos = randf_range(30, vp.x - 30)
+			bullet.global_position = Vector2(x_pos, randf_range(-20, 10))
+			var x_drift = randf_range(-0.18, 0.18)
+			bullet.direction = Vector2(x_drift, 1.0).normalized()
+			bullet.speed = randf_range(180.0, 300.0)
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+		# --- Every other wave: 8 BOUNCE bullets from left/right edges ---
+		if wave % 2 == 0:
+			for side in range(2):
+				var edge_x = 15.0 if side == 0 else vp.x - 15.0
+				for j in range(4):
+					var bullet = bullet_scene.instantiate() as EnemyBullet
+					var y_pos = 80.0 + j * 130.0 + randf_range(-20, 20)
+					bullet.global_position = Vector2(edge_x, y_pos)
+					var aim_dir: Vector2
+					if player and is_instance_valid(player):
+						aim_dir = (player.global_position - bullet.global_position).normalized()
+					else:
+						aim_dir = Vector2(1.0 - side * 2.0, 0.3).normalized()
+					bullet.direction = aim_dir.rotated(randf_range(-0.2, 0.2))
+					bullet.speed = randf_range(280.0, 380.0)
+					bullet.bullet_type = EnemyBullet.BulletType.BOUNCE
+					bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+					get_parent().add_child(bullet)
+		await get_tree().create_timer(0.08).timeout
+
+
+func _boss2_love_letter_cascade() -> void:
+	# Cascading "love letters": bullets fall from top in 5 columns. Each column
+	# fires 6 SPLIT bullets that split into 3 after falling partway, creating a
+	# "letter opening" visual. Between cascades, fire aimed fans at player.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	var vp = get_viewport_rect().size
+	for cascade in range(6):
+		# --- 5 columns of 6 SPLIT bullets each ---
+		var col_spacing = (vp.x - 120.0) / 4.0
+		for col in range(5):
+			var col_x = 60.0 + col * col_spacing + randf_range(-15, 15)
+			for row in range(6):
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = Vector2(col_x + randf_range(-8, 8), -10.0 - row * 18.0)
+				var drift = (col - 2.0) * 0.04
+				bullet.direction = Vector2(drift, 1.0).normalized()
+				bullet.speed = 200.0 + row * 15.0
+				bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+				bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.06).timeout
+		# --- Aimed fan at player from boss between cascades ---
+		if player and is_instance_valid(player):
+			var aim = global_position.direction_to(player.global_position).angle()
+			for f in range(9):
+				var spread = aim + (f - 4.0) * 0.15
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(spread), sin(spread))
+				bullet.speed = 300.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.10).timeout
+
+
+func _boss2_rose_petal_fall() -> void:
+	# Rose petals: 80 SINE_WAVE bullets fall from top with beautiful wobble.
+	# Simultaneously, HOMING "thorns" spawn from screen edges (4 per wave, 6 waves).
+	# The sine wave creates a gentle falling petal visual while thorns pressure player.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	var vp = get_viewport_rect().size
+	for wave in range(6):
+		# --- ~13 rose petal SINE_WAVE bullets per wave (80 total across 6 waves) ---
+		var petals_this_wave = 13 if wave < 5 else 15
+		for i in range(petals_this_wave):
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			var x_pos = randf_range(25, vp.x - 25)
+			bullet.global_position = Vector2(x_pos, randf_range(-25, 5))
+			bullet.direction = Vector2(randf_range(-0.06, 0.06), 1.0).normalized()
+			bullet.speed = randf_range(120.0, 200.0)
+			bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+			bullet.wave_amplitude = 35.0
+			bullet.wave_frequency = 2.5
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+		# --- 4 HOMING thorn bullets from screen edges ---
+		if player and is_instance_valid(player):
+			var edge_positions: Array[Vector2] = [
+				Vector2(15, randf_range(80, vp.y - 80)),
+				Vector2(vp.x - 15, randf_range(80, vp.y - 80)),
+				Vector2(randf_range(80, vp.x - 80), 15),
+				Vector2(randf_range(80, vp.x - 80), vp.y - 15)
+			]
+			for e in range(4):
+				var thorn = bullet_scene.instantiate() as EnemyBullet
+				thorn.global_position = edge_positions[e]
+				thorn.direction = (player.global_position - thorn.global_position).normalized()
+				thorn.speed = 200.0
+				thorn.bullet_type = EnemyBullet.BulletType.HOMING
+				thorn._homing_strength = 2.0
+				thorn._homing_duration = 0.6
+				thorn.set_sprite("res://assets/sprites/bossbullut-7.png")
+				get_parent().add_child(thorn)
+		await get_tree().create_timer(0.12).timeout
+
+
+func _boss2_confession_barrage() -> void:
+	# Confession: Rapid aimed bursts at player (15 bullets per burst, 10 bursts).
+	# Every 3rd burst is DECELERATE type -- bullets stop near player then re-aim.
+	# Between bursts, fire a quick ring of 12 bullets. Very aggressive and fast.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	for burst in range(10):
+		var target_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		var aim = global_position.direction_to(target_pos).angle()
+		var is_decel = (burst % 3 == 2)
+		# --- 15-bullet aimed burst at player ---
+		for i in range(15):
+			var spread = aim + (i - 7.0) * 0.06
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 340.0 + i * 8.0
+			if is_decel:
+				bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+				bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			else:
+				bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+		# --- Quick ring of 12 bullets between bursts ---
+		for r in range(12):
+			var ring_angle = (TAU / 12.0) * r + burst * 0.3
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(ring_angle), sin(ring_angle))
+			bullet.speed = 220.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-4.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.06).timeout
+
+
+func _boss2_broken_mirror() -> void:
+	# Broken mirror: BOUNCE bullets in aimed fans ricochet off walls like shattered
+	# glass. Between volleys, black big hearts spawn at boss and GROW
+	# before launching at the player. 7 volleys of reflected shards + growing hearts.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for volley in range(7):
+		var aim = global_position.direction_to(player.global_position).angle()
+		# --- 12-bullet BOUNCE fan aimed at player ---
+		for i in range(12):
+			var spread = aim + (i - 5.5) * 0.13
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = randf_range(280.0, 370.0)
+			bullet.bullet_type = EnemyBullet.BulletType.BOUNCE
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+		# --- 3 black big hearts that grow then launch at player ---
+		var hearts_this_volley: Array[EnemyBullet] = []
+		for h in range(3):
+			var heart = bullet_scene.instantiate() as EnemyBullet
+			heart.global_position = global_position + Vector2(randf_range(-30, 30), randf_range(-20, 20))
+			heart.direction = Vector2.ZERO
+			heart.speed = 0.0
+			heart.scale = Vector2(0.4, 0.4)
+			heart.set_sprite("res://assets/sprites/bossbullut-7.png")
+			get_parent().add_child(heart)
+			hearts_this_volley.append(heart)
+			var tw = get_tree().create_tween()
+			tw.tween_property(heart, "scale", Vector2(2.2, 2.2), 0.35)
+		await get_tree().create_timer(0.38).timeout
+		# Launch grown hearts at player
+		for heart in hearts_this_volley:
+			if is_instance_valid(heart) and player and is_instance_valid(player):
+				heart.direction = (player.global_position - heart.global_position).normalized()
+				heart.speed = 240.0
+		await get_tree().create_timer(0.08).timeout
+
+
+# ============================================================================
+# Boss 2 - Forbidden Love (Spell 2) -- 5 skills
+# ============================================================================
+
+func _boss2_love_cage() -> void:
+	# Love cage: Orbit bullets circle the player then dash inward. Between orbit
+	# waves, boss fires aimed SINE_WAVE fans. The orbiting hearts close in like a
+	# cage of love. 6 waves of orbit-dash + sine fans.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for wave in range(6):
+		var p_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- 10 orbit bullets circling the player ---
+		for i in range(10):
+			var orbit_angle = (TAU / 10.0) * i
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = p_pos + Vector2(cos(orbit_angle), sin(orbit_angle)) * 160.0
+			bullet.direction = Vector2.ZERO
+			bullet.speed = 0.0
+			bullet.orbit_center = p_pos
+			bullet.orbit_radius = 160.0
+			bullet.orbit_angle = orbit_angle
+			bullet.orbit_angular_speed = 3.5
+			bullet.orbit_time_left = 1.2
+			bullet.dash_after_orbit = true
+			bullet.dash_target = p_pos
+			bullet.dash_speed = 320.0
+			bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.06).timeout
+		# --- 8 SINE_WAVE bullets aimed at player from boss ---
+		var aim = global_position.direction_to(p_pos).angle()
+		for j in range(8):
+			var spread = aim + (j - 3.5) * 0.18
+			var sine_b = bullet_scene.instantiate() as EnemyBullet
+			sine_b.global_position = global_position
+			sine_b.direction = Vector2(cos(spread), sin(spread))
+			sine_b.speed = 260.0
+			sine_b.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+			sine_b.amplitude = 35.0
+			sine_b.frequency = 5.0
+			sine_b.set_sprite("res://assets/sprites/bossbullut-14.png")
+			get_parent().add_child(sine_b)
+		await get_tree().create_timer(0.12).timeout
+
+
+func _boss2_heartbreak_rain() -> void:
+	# Heartbreak rain: Dense SPLIT rain from top of screen aimed
+	# toward the player. Each raindrop splits into 3 smaller bullets on a timer,
+	# creating a cascading downpour. Boss also fires aimed ACCELERATE bursts. 8 waves.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	for wave in range(8):
+		var p_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- 18 SPLIT rain bullets from top, angled toward player ---
+		for i in range(18):
+			var x_pos = randf_range(30, vp.x - 30)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(x_pos, randf_range(-15, 5))
+			var dir_to_player = (p_pos - bullet.global_position).normalized()
+			var drift = Vector2(randf_range(-0.15, 0.15), 0)
+			bullet.direction = (dir_to_player + drift).normalized()
+			bullet.speed = randf_range(200.0, 310.0)
+			bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+			bullet.split_count = 3
+			bullet.split_angle_spread = 0.5
+			bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.05).timeout
+		# --- 6 ACCELERATE bullets from boss aimed at player ---
+		var aim = global_position.direction_to(p_pos).angle()
+		for j in range(6):
+			var spread = aim + (j - 2.5) * 0.22
+			var acc_b = bullet_scene.instantiate() as EnemyBullet
+			acc_b.global_position = global_position
+			acc_b.direction = Vector2(cos(spread), sin(spread))
+			acc_b.speed = 200.0
+			acc_b.bullet_type = EnemyBullet.BulletType.ACCELERATE
+			acc_b.set_sprite("res://assets/sprites/bossbullut-4.png")
+			get_parent().add_child(acc_b)
+		await get_tree().create_timer(0.10).timeout
+
+
+func _boss2_dark_devotion() -> void:
+	# Dark devotion: DECELERATE heart rings expand from boss, slow to a stop, then
+	# re-aim and ACCELERATE toward the player. Black hearts (bossbullut-7) that
+	# decelerate create a freeze-frame effect before homing in. 6 rings of 14 bullets.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	for ring in range(6):
+		var ring_bullets: Array[EnemyBullet] = []
+		# --- 14-bullet DECELERATE ring expanding from boss ---
+		for i in range(14):
+			var angle = (TAU / 14.0) * i + ring * 0.25
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(angle), sin(angle))
+			bullet.speed = 300.0
+			bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+			bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+			get_parent().add_child(bullet)
+			ring_bullets.append(bullet)
+		await get_tree().create_timer(0.03).timeout
+		# --- 5 aimed SPIRAL bullets from boss at player ---
+		var p_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		var aim = global_position.direction_to(p_pos).angle()
+		for j in range(5):
+			var spread = aim + (j - 2.0) * 0.28
+			var sp_b = bullet_scene.instantiate() as EnemyBullet
+			sp_b.global_position = global_position
+			sp_b.direction = Vector2(cos(spread), sin(spread))
+			sp_b.speed = 250.0
+			sp_b.bullet_type = EnemyBullet.BulletType.SPIRAL
+			sp_b.set_sprite("res://assets/sprites/bossbullut-7.png")
+			get_parent().add_child(sp_b)
+		# Wait for decelerate bullets to slow down, then re-aim them
+		await get_tree().create_timer(0.55).timeout
+		for b in ring_bullets:
+			if is_instance_valid(b) and player and is_instance_valid(player):
+				b.direction = (player.global_position - b.global_position).normalized()
+				b.speed = 280.0
+				b.bullet_type = EnemyBullet.BulletType.ACCELERATE
+		await get_tree().create_timer(0.08).timeout
+
+
+func _boss2_forbidden_kiss() -> void:
+	# Forbidden kiss: HOMING bullets spawn from screen edges and chase the player
+	# while the boss fires LASER beams aimed at the player. The combination of
+	# persistent homing and sweeping lasers creates deadly crossfire. 7 waves.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	for wave in range(7):
+		var p_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- 8 HOMING bullets from random screen edges aimed at player ---
+		for i in range(8):
+			var edge_pos: Vector2
+			var side = randi() % 4
+			match side:
+				0: edge_pos = Vector2(randf_range(0, vp.x), -10)
+				1: edge_pos = Vector2(randf_range(0, vp.x), vp.y + 10)
+				2: edge_pos = Vector2(-10, randf_range(0, vp.y))
+				3: edge_pos = Vector2(vp.x + 10, randf_range(0, vp.y))
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = edge_pos
+			bullet.direction = (p_pos - edge_pos).normalized()
+			bullet.speed = 220.0
+			bullet.bullet_type = EnemyBullet.BulletType.HOMING
+			bullet._homing_strength = 2.5
+			bullet._homing_duration = 1.5
+			bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+		# --- 4 LASER beams from boss aimed at player with slight spread ---
+		var aim = global_position.direction_to(p_pos).angle()
+		for j in range(4):
+			var spread = aim + (j - 1.5) * 0.15
+			var laser = bullet_scene.instantiate() as EnemyBullet
+			laser.global_position = global_position
+			laser.direction = Vector2(cos(spread), sin(spread))
+			laser.speed = 380.0
+			laser.bullet_type = EnemyBullet.BulletType.LASER
+			laser.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(laser)
+		await get_tree().create_timer(0.02).timeout
+		# --- 6 pink scatter bullets from boss toward player ---
+		for k in range(6):
+			var scatter = aim + randf_range(-0.5, 0.5)
+			var pink = bullet_scene.instantiate() as EnemyBullet
+			pink.global_position = global_position
+			pink.direction = Vector2(cos(scatter), sin(scatter))
+			pink.speed = randf_range(250.0, 340.0)
+			pink.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(pink)
+		await get_tree().create_timer(0.10).timeout
+
+
+func _boss2_love_labyrinth() -> void:
+	# Love labyrinth: CURVE bullet walls spawn from all 4 sides and curve inward
+	# toward the player, forming closing maze walls. Boss also fires aimed BOUNCE
+	# fans through the gaps. The curving walls force the player to navigate a
+	# shrinking labyrinth of love. 6 waves.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	for wave in range(6):
+		var p_pos = player.global_position if player and is_instance_valid(player) else Vector2(450, 350)
+		# --- CURVE walls from 4 sides, 6 bullets per side, aimed toward player ---
+		# Top wall
+		for i in range(6):
+			var x = (vp.x / 7.0) * (i + 1)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(x, -10)
+			bullet.direction = (p_pos - bullet.global_position).normalized()
+			bullet.speed = randf_range(210.0, 290.0)
+			bullet.bullet_type = EnemyBullet.BulletType.CURVE
+			bullet.curve_strength = randf_range(1.5, 3.0) * (1 if randf() > 0.5 else -1)
+			bullet.set_sprite("res://assets/sprites/bossbullut-14.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.03).timeout
+		# Bottom wall
+		for i in range(6):
+			var x = (vp.x / 7.0) * (i + 1)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(x, vp.y + 10)
+			bullet.direction = (p_pos - bullet.global_position).normalized()
+			bullet.speed = randf_range(210.0, 290.0)
+			bullet.bullet_type = EnemyBullet.BulletType.CURVE
+			bullet.curve_strength = randf_range(1.5, 3.0) * (1 if randf() > 0.5 else -1)
+			bullet.set_sprite("res://assets/sprites/bossbullut-14.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.03).timeout
+		# Left wall
+		for i in range(6):
+			var y = (vp.y / 7.0) * (i + 1)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(-10, y)
+			bullet.direction = (p_pos - bullet.global_position).normalized()
+			bullet.speed = randf_range(210.0, 290.0)
+			bullet.bullet_type = EnemyBullet.BulletType.CURVE
+			bullet.curve_strength = randf_range(1.5, 3.0) * (1 if randf() > 0.5 else -1)
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.03).timeout
+		# Right wall
+		for i in range(6):
+			var y = (vp.y / 7.0) * (i + 1)
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = Vector2(vp.x + 10, y)
+			bullet.direction = (p_pos - bullet.global_position).normalized()
+			bullet.speed = randf_range(210.0, 290.0)
+			bullet.bullet_type = EnemyBullet.BulletType.CURVE
+			bullet.curve_strength = randf_range(1.5, 3.0) * (1 if randf() > 0.5 else -1)
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.04).timeout
+		# --- 8 BOUNCE bullets from boss aimed at player through gaps ---
+		var aim = global_position.direction_to(p_pos).angle()
+		for j in range(8):
+			var spread = aim + (j - 3.5) * 0.16
+			var bounce_b = bullet_scene.instantiate() as EnemyBullet
+			bounce_b.global_position = global_position
+			bounce_b.direction = Vector2(cos(spread), sin(spread))
+			bounce_b.speed = randf_range(300.0, 370.0)
+			bounce_b.bullet_type = EnemyBullet.BulletType.BOUNCE
+			bounce_b.set_sprite("res://assets/sprites/bossbullut-7.png")
+			get_parent().add_child(bounce_b)
+		await get_tree().create_timer(0.12).timeout
