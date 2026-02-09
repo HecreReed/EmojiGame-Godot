@@ -4930,58 +4930,102 @@ func _boss1_sand_guardian_summon() -> void:
 	# fire aimed fans at player. Also fire DECELERATE ring that stops and re-aims.
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
-	var vp = get_viewport_rect().size
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
 	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	if not enemy_scene_ref:
+		return
+
 	# --- Summon 3 TANK minions in triangle formation around boss ---
 	for i in range(3):
-		var angle = (TAU / 3.0) * i - PI / 2.0
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var angle := (TAU / 3.0) * float(i) - PI / 2.0
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.TANK
-		minion.global_position = global_position + Vector2(cos(angle), sin(angle)) * 140.0
+		var pos := global_position + Vector2(cos(angle), sin(angle)) * 140.0
+		pos.x = clampf(pos.x, 60.0, viewport_size.x - 60.0)
+		pos.y = clampf(pos.y, 60.0, playfield_bottom - 60.0)
+		minion.global_position = pos
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.15).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# --- Main attack loop: aimed fans + decelerate rings ---
 	for wave in range(10):
-		if not player or not is_instance_valid(player):
-			break
-		var aim = global_position.direction_to(player.global_position).angle()
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+
+		var aim := global_position.direction_to(player.global_position).angle()
 		# Aimed bullet fan at player (9 bullets)
 		for j in range(9):
-			var spread = aim + (j - 4) * 0.18
-			var bullet = bullet_scene.instantiate() as EnemyBullet
+			var spread := aim + (float(j) - 4.0) * 0.18
+			var bullet := bullet_scene.instantiate() as EnemyBullet
+			if not bullet:
+				continue
 			bullet.global_position = global_position
 			bullet.direction = Vector2(cos(spread), sin(spread))
 			bullet.speed = 300.0
 			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.08).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# DECELERATE ring that stops and re-aims at player
 		if wave % 2 == 0:
 			for k in range(16):
-				var ring_angle = (TAU / 16.0) * k + wave * 0.3
-				var bullet = bullet_scene.instantiate() as EnemyBullet
-				bullet.global_position = global_position
-				bullet.direction = Vector2(cos(ring_angle), sin(ring_angle))
-				bullet.speed = 280.0
-				bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
-				bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
-				get_parent().add_child(bullet)
+				var ring_angle := (TAU / 16.0) * float(k) + float(wave) * 0.3
+				var ring_bullet := bullet_scene.instantiate() as EnemyBullet
+				if not ring_bullet:
+					continue
+				ring_bullet.global_position = global_position
+				ring_bullet.direction = Vector2(cos(ring_angle), sin(ring_angle))
+				ring_bullet.speed = 280.0
+				ring_bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+				ring_bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+				get_parent().add_child(ring_bullet)
 		await get_tree().create_timer(0.10).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# Secondary aimed burst between waves for pressure
-		if player and is_instance_valid(player):
-			var aim2 = global_position.direction_to(player.global_position).angle()
+		player = _get_player_safe()
+		if player:
+			var aim2 := global_position.direction_to(player.global_position).angle()
 			for m in range(5):
-				var spread2 = aim2 + (m - 2) * 0.25
-				var bullet = bullet_scene.instantiate() as EnemyBullet
-				bullet.global_position = global_position
-				bullet.direction = Vector2(cos(spread2), sin(spread2))
-				bullet.speed = 340.0
-				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-				get_parent().add_child(bullet)
+				var spread2 := aim2 + (float(m) - 2.0) * 0.25
+				var bullet2 := bullet_scene.instantiate() as EnemyBullet
+				if not bullet2:
+					continue
+				bullet2.global_position = global_position
+				bullet2.direction = Vector2(cos(spread2), sin(spread2))
+				bullet2.speed = 340.0
+				bullet2.set_sprite("res://assets/sprites/bossbullut-3.png")
+				get_parent().add_child(bullet2)
 		await get_tree().create_timer(0.02).timeout
+		if _pattern_should_abort(token):
+			return
 
 
 func _boss1_scarab_swarm() -> void:
@@ -4989,28 +5033,57 @@ func _boss1_scarab_swarm() -> void:
 	# Boss fires HOMING bullets at player. Between waves, fire SPLIT bullets.
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
-	var vp = get_viewport_rect().size
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
 	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	if not enemy_scene_ref:
+		return
+
 	# --- Summon 4 FAST minions from each screen edge ---
-	var edge_positions = [
-		Vector2(vp.x * 0.5, 30),          # top center
-		Vector2(vp.x * 0.5, vp.y - 30),   # bottom center
-		Vector2(30, vp.y * 0.4),           # left
-		Vector2(vp.x - 30, vp.y * 0.4)    # right
+	var edge_positions: Array[Vector2] = [
+		Vector2(viewport_size.x * 0.5, 30.0),                    # top center
+		Vector2(viewport_size.x * 0.5, playfield_bottom - 30.0), # bottom center (exclude BottomBar)
+		Vector2(30.0, playfield_bottom * 0.4),                   # left
+		Vector2(viewport_size.x - 30.0, playfield_bottom * 0.4)  # right
 	]
-	for idx in range(4):
+	for idx in range(edge_positions.size()):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.FAST
-		minion.global_position = edge_positions[idx]
+		var spawn_pos := edge_positions[idx]
+		spawn_pos.x = clampf(spawn_pos.x, 60.0, viewport_size.x - 60.0)
+		spawn_pos.y = clampf(spawn_pos.y, 60.0, playfield_bottom - 60.0)
+		minion.global_position = spawn_pos
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.12).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# --- Main attack loop: HOMING bullets + SPLIT bursts ---
 	for wave in range(8):
-		if not player or not is_instance_valid(player):
-			break
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+
 		# HOMING bullets aimed at player from boss (6 per wave)
 		var aim = global_position.direction_to(player.global_position).angle()
 		for j in range(6):
@@ -5025,8 +5098,12 @@ func _boss1_scarab_swarm() -> void:
 			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.10).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# SPLIT bullets aimed at player between waves
-		if wave % 2 == 0 and player and is_instance_valid(player):
+		player = _get_player_safe()
+		if wave % 2 == 0 and player:
 			var aim2 = global_position.direction_to(player.global_position).angle()
 			for k in range(8):
 				var spread2 = aim2 + (k - 3.5) * 0.15
@@ -5038,8 +5115,12 @@ func _boss1_scarab_swarm() -> void:
 				bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
 				get_parent().add_child(bullet)
 		await get_tree().create_timer(0.08).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# Extra aimed burst for sustained pressure
-		if player and is_instance_valid(player):
+		player = _get_player_safe()
+		if player:
 			var aim3 = global_position.direction_to(player.global_position).angle()
 			for n in range(4):
 				var bullet = bullet_scene.instantiate() as EnemyBullet
@@ -5049,6 +5130,8 @@ func _boss1_scarab_swarm() -> void:
 				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 				get_parent().add_child(bullet)
 		await get_tree().create_timer(0.06).timeout
+		if _pattern_should_abort(token):
+			return
 
 
 func _boss1_pharaoh_guard() -> void:
@@ -5056,26 +5139,56 @@ func _boss1_pharaoh_guard() -> void:
 	# streams aimed at player. Minions provide crossfire pressure.
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
-	var vp = get_viewport_rect().size
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
 	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	if not enemy_scene_ref:
+		return
+
 	# --- Summon 2 SNIPER minions flanking the boss ---
 	var flank_offset = 180.0
 	for side in range(2):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var x_off = -flank_offset if side == 0 else flank_offset
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.SNIPER
-		minion.global_position = Vector2(global_position.x + x_off, global_position.y + 40.0)
+		var pos := Vector2(global_position.x + x_off, global_position.y + 40.0)
+		pos.x = clampf(pos.x, 60.0, viewport_size.x - 60.0)
+		pos.y = clampf(pos.y, 60.0, playfield_bottom - 60.0)
+		minion.global_position = pos
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.12).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# --- Main attack loop: alternating SINE_WAVE streams at player ---
 	var stream_offset = 0.0
 	for wave in range(12):
-		if not player or not is_instance_valid(player):
-			break
-		var aim = global_position.direction_to(player.global_position).angle()
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+
+		var player_pos := player.global_position
+		var aim = global_position.direction_to(player_pos).angle()
 		# Alternating sine wave streams (left-leaning and right-leaning)
 		var sine_sign = 1.0 if wave % 2 == 0 else -1.0
 		for j in range(5):
@@ -5089,8 +5202,12 @@ func _boss1_pharaoh_guard() -> void:
 			get_parent().add_child(bullet)
 		stream_offset += 0.08 * sine_sign
 		await get_tree().create_timer(0.07).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# Every 3rd wave, fire a tight aimed burst for extra pressure
-		if wave % 3 == 0 and player and is_instance_valid(player):
+		player = _get_player_safe()
+		if wave % 3 == 0 and player:
 			var aim2 = global_position.direction_to(player.global_position).angle()
 			for k in range(7):
 				var spread2 = aim2 + (k - 3) * 0.12
@@ -5101,10 +5218,14 @@ func _boss1_pharaoh_guard() -> void:
 				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 				get_parent().add_child(bullet)
 		# Every 4th wave, fire sine wave streams from flank positions
-		if wave % 4 == 0 and player and is_instance_valid(player):
+		player = _get_player_safe()
+		if wave % 4 == 0 and player:
+			var ppos := player.global_position
 			for side in range(2):
 				var flank_pos = Vector2(global_position.x + (-flank_offset if side == 0 else flank_offset), global_position.y + 40.0)
-				var flank_aim = flank_pos.direction_to(player.global_position).angle()
+				flank_pos.x = clampf(flank_pos.x, 60.0, viewport_size.x - 60.0)
+				flank_pos.y = clampf(flank_pos.y, 60.0, playfield_bottom - 60.0)
+				var flank_aim = flank_pos.direction_to(ppos).angle()
 				for f in range(4):
 					var bullet = bullet_scene.instantiate() as EnemyBullet
 					bullet.global_position = flank_pos
@@ -5114,6 +5235,8 @@ func _boss1_pharaoh_guard() -> void:
 					bullet.set_sprite("res://assets/sprites/bossbullut-8.png")
 					get_parent().add_child(bullet)
 		await get_tree().create_timer(0.06).timeout
+		if _pattern_should_abort(token):
+			return
 
 
 func _boss1_obelisk_ritual() -> void:
@@ -5121,28 +5244,57 @@ func _boss1_obelisk_ritual() -> void:
 	# Between summon waves, fire orbit bullets that dash at player after orbiting.
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
-	var vp = get_viewport_rect().size
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
 	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	if not enemy_scene_ref:
+		return
+
 	# --- Summon 4 SUICIDE minions at screen corners ---
 	var corner_positions = [
 		Vector2(60, 60),
-		Vector2(vp.x - 60, 60),
-		Vector2(60, vp.y - 60),
-		Vector2(vp.x - 60, vp.y - 60)
+		Vector2(viewport_size.x - 60, 60),
+		Vector2(60, playfield_bottom - 60),
+		Vector2(viewport_size.x - 60, playfield_bottom - 60)
 	]
 	for idx in range(4):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.SUICIDE
-		minion.global_position = corner_positions[idx]
+		var pos: Vector2 = corner_positions[idx]
+		pos.x = clampf(pos.x, 60.0, viewport_size.x - 60.0)
+		pos.y = clampf(pos.y, 60.0, playfield_bottom - 60.0)
+		minion.global_position = pos
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.12).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# --- Main attack loop: ACCELERATE fans + orbit-dash bullets ---
 	for wave in range(8):
-		if not player or not is_instance_valid(player):
-			break
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+
 		# ACCELERATE bullet fan aimed at player (10 bullets)
 		var aim = global_position.direction_to(player.global_position).angle()
 		for j in range(10):
@@ -5155,8 +5307,13 @@ func _boss1_obelisk_ritual() -> void:
 			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.10).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# Orbit bullets that circle boss then dash at player
-		if wave % 2 == 0 and player and is_instance_valid(player):
+		player = _get_player_safe()
+		if wave % 2 == 0 and player:
+			var dash_target := player.global_position
 			var orbit_count = 10
 			for k in range(orbit_count):
 				var orb_angle = (TAU / orbit_count) * k
@@ -5172,13 +5329,17 @@ func _boss1_obelisk_ritual() -> void:
 				bullet.orbit_angular_speed = 4.0 * (1 if wave % 4 == 0 else -1)
 				bullet.orbit_time_left = 0.6
 				bullet.dash_after_orbit = true
-				bullet.dash_target = player.global_position
+				bullet.dash_target = dash_target
 				bullet.dash_speed = 340.0
 				bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
 				get_parent().add_child(bullet)
 		await get_tree().create_timer(0.08).timeout
+		if _pattern_should_abort(token):
+			return
+
 		# Extra aimed narrow burst for sustained threat
-		if player and is_instance_valid(player):
+		player = _get_player_safe()
+		if player:
 			var aim2 = global_position.direction_to(player.global_position).angle()
 			for n in range(3):
 				var bullet = bullet_scene.instantiate() as EnemyBullet
@@ -5188,6 +5349,8 @@ func _boss1_obelisk_ritual() -> void:
 				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 				get_parent().add_child(bullet)
 		await get_tree().create_timer(0.06).timeout
+		if _pattern_should_abort(token):
+			return
 
 
 func _boss1_desert_legion() -> void:
@@ -5195,24 +5358,50 @@ func _boss1_desert_legion() -> void:
 	# Wave 3: 2 SNIPER + HOMING burst. Each wave summons at random edge positions.
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player or not is_instance_valid(player):
-		return
-	var vp = get_viewport_rect().size
+	var token := _phase_token
+	var viewport_size := get_viewport_rect().size
+	var playfield_bottom := viewport_size.y
+	if GameManager and GameManager.has_method("get_playfield_bottom_y"):
+		playfield_bottom = GameManager.get_playfield_bottom_y(viewport_size)
+
 	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	if not enemy_scene_ref:
+		return
+
 	# ===== WAVE 1: 2 FAST minions + aimed bullet fan =====
 	for i in range(2):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.FAST
-		var edge_x = randf_range(80, vp.x - 80)
-		var edge_y = 30.0 if i == 0 else vp.y - 30.0
+		var edge_x = randf_range(80.0, viewport_size.x - 80.0)
+		var edge_y = 30.0 if i == 0 else playfield_bottom - 30.0
 		minion.global_position = Vector2(edge_x, edge_y)
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.10).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# Wave 1 bullets: aimed fan at player (4 rounds)
 	for round_idx in range(4):
-		if not player or not is_instance_valid(player):
-			break
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
+
 		var aim = global_position.direction_to(player.global_position).angle()
 		for j in range(11):
 			var spread = aim + (j - 5) * 0.15
@@ -5223,20 +5412,43 @@ func _boss1_desert_legion() -> void:
 			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.08).timeout
+		if _pattern_should_abort(token):
+			return
+
 	# ===== WAVE 2: 2 TANK minions + LASER sweep at player =====
 	for i in range(2):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.TANK
-		var edge_y2 = randf_range(100, vp.y - 100)
-		var edge_x2 = 30.0 if i == 0 else vp.x - 30.0
+		var edge_y2 = randf_range(100.0, maxf(100.0, playfield_bottom - 100.0))
+		var edge_x2 = 30.0 if i == 0 else viewport_size.x - 30.0
 		minion.global_position = Vector2(edge_x2, edge_y2)
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.10).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# Wave 2 bullets: LASER sweep aimed at player (sweeping arc)
-	if player and is_instance_valid(player):
+	var player := _get_player_safe()
+	if player:
 		var base_aim = global_position.direction_to(player.global_position).angle()
 		var sweep_start = base_aim - 0.6
 		for s in range(16):
+			if _pattern_should_abort(token):
+				return
+			while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+				if _pattern_should_abort(token):
+					return
+				await get_tree().create_timer(0.1).timeout
+
 			var sweep_angle = sweep_start + s * 0.075
 			var laser = bullet_scene.instantiate() as EnemyBullet
 			laser.global_position = global_position
@@ -5253,19 +5465,43 @@ func _boss1_desert_legion() -> void:
 			side_bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
 			get_parent().add_child(side_bullet)
 			await get_tree().create_timer(0.04).timeout
+			if _pattern_should_abort(token):
+				return
+
 	# ===== WAVE 3: 2 SNIPER minions + HOMING burst =====
 	for i in range(2):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		if not minion:
+			continue
 		minion.enemy_kind = EnemyKind.SNIPER
-		var edge_x3 = randf_range(100, vp.x - 100)
-		var edge_y3 = 30.0 if i == 0 else vp.y - 30.0
+		var edge_x3 = randf_range(100.0, viewport_size.x - 100.0)
+		var edge_y3 = 30.0 if i == 0 else playfield_bottom - 30.0
 		minion.global_position = Vector2(edge_x3, edge_y3)
 		get_parent().add_child(minion)
 	await get_tree().create_timer(0.10).timeout
+	if _pattern_should_abort(token):
+		return
+
 	# Wave 3 bullets: HOMING burst aimed at player (5 rounds)
 	for round_idx in range(5):
-		if not player or not is_instance_valid(player):
-			break
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		player = _get_player_safe()
+		if not player:
+			return
+
 		var aim = global_position.direction_to(player.global_position).angle()
 		for j in range(8):
 			var spread = aim + (j - 3.5) * 0.2
@@ -5279,7 +5515,8 @@ func _boss1_desert_legion() -> void:
 			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			get_parent().add_child(bullet)
 		# Supplementary aimed normal bullets
-		if player and is_instance_valid(player):
+		player = _get_player_safe()
+		if player:
 			var aim2 = global_position.direction_to(player.global_position).angle()
 			for k in range(5):
 				var bullet = bullet_scene.instantiate() as EnemyBullet
@@ -5289,6 +5526,8 @@ func _boss1_desert_legion() -> void:
 				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 				get_parent().add_child(bullet)
 		await get_tree().create_timer(0.07).timeout
+		if _pattern_should_abort(token):
+			return
 # =============================================================================
 # SPELL 2 - Gravity Manipulation (5 skills)
 # =============================================================================
@@ -12472,8 +12711,15 @@ func _boss6_inferno_spiral() -> void:
 	# Triple interleaving fire spirals + aimed bursts
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
+	var token := _phase_token
 	for step in range(48):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		for arm in range(3):
 			var base_angle = step * 0.175 + arm * (TAU / 3.0)
 			var bullet = bullet_scene.instantiate() as EnemyBullet
@@ -12483,24 +12729,36 @@ func _boss6_inferno_spiral() -> void:
 			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			bullet.bullet_type = EnemyBullet.BulletType.SPIRAL
 			get_parent().add_child(bullet)
-		if step % 8 == 0 and player:
-			var aim = global_position.direction_to(player.global_position).angle()
-			for i in range(5):
-				var bullet = bullet_scene.instantiate() as EnemyBullet
-				bullet.global_position = global_position
-				bullet.direction = Vector2(cos(aim + (i - 2) * 0.15), sin(aim + (i - 2) * 0.15))
-				bullet.speed = 300.0
-				bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
-				get_parent().add_child(bullet)
+		if step % 8 == 0:
+			var player := _get_player_safe()
+			if player:
+				var aim = global_position.direction_to(player.global_position).angle()
+				for i in range(5):
+					var bullet = bullet_scene.instantiate() as EnemyBullet
+					bullet.global_position = global_position
+					bullet.direction = Vector2(cos(aim + (i - 2) * 0.15), sin(aim + (i - 2) * 0.15))
+					bullet.speed = 300.0
+					bullet.set_sprite("res://assets/sprites/bossbullut-1.png")
+					get_parent().add_child(bullet)
 		await get_tree().create_timer(0.04).timeout
+		if _pattern_should_abort(token):
+			return
 
 func _boss6_flame_wheel() -> void:
 	# Rotating fire wheel that tracks player
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
+	var token := _phase_token
 	for rotation in range(12):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
 		var aim_offset = 0.0
+		var player := _get_player_safe()
 		if player:
 			aim_offset = global_position.direction_to(player.global_position).angle()
 		for spoke in range(20):
@@ -12513,15 +12771,25 @@ func _boss6_flame_wheel() -> void:
 			bullet.bullet_type = EnemyBullet.BulletType.CURVE
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.12).timeout
+		if _pattern_should_abort(token):
+			return
 
 func _boss6_ember_scatter() -> void:
 	# Rapid aimed ember spray with homing
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player:
-		return
+	var token := _phase_token
 	for burst in range(10):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
 		var aim_angle = global_position.direction_to(player.global_position).angle()
 		for i in range(14):
 			var spread = randf_range(-0.5, 0.5)
@@ -12539,6 +12807,8 @@ func _boss6_ember_scatter() -> void:
 				bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.10).timeout
+		if _pattern_should_abort(token):
+			return
 
 func _boss6_blaze_wave() -> void:
 	# Fast sweeping fire walls from screen edges
@@ -12561,13 +12831,23 @@ func _boss6_fire_serpent() -> void:
 	# Fast curving fire snakes aimed at player
 	if not bullet_scene or not get_parent():
 		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player:
-		return
+	var token := _phase_token
 	for serpent in range(6):
+		if _pattern_should_abort(token):
+			return
+		while GameManager.time_stop_active and GameManager.time_stop_freeze_boss:
+			if _pattern_should_abort(token):
+				return
+			await get_tree().create_timer(0.1).timeout
+
+		var player := _get_player_safe()
+		if not player:
+			return
 		var base_angle = global_position.direction_to(player.global_position).angle()
 		base_angle += serpent * 0.35 - 0.875
 		for segment in range(16):
+			if _pattern_should_abort(token):
+				return
 			var bullet = bullet_scene.instantiate() as EnemyBullet
 			bullet.global_position = global_position
 			var wobble = sin(segment * 0.8) * 0.25
@@ -12577,7 +12857,11 @@ func _boss6_fire_serpent() -> void:
 			bullet.bullet_type = EnemyBullet.BulletType.CURVE
 			get_parent().add_child(bullet)
 			await get_tree().create_timer(0.02).timeout
+			if _pattern_should_abort(token):
+				return
 		await get_tree().create_timer(0.08).timeout
+		if _pattern_should_abort(token):
+			return
 
 func _boss6_magma_burst() -> void:
 	# Explosive rings + aimed homing center
