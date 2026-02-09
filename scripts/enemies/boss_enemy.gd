@@ -812,35 +812,35 @@ func _build_midboss_phase_defs(total_hp: int) -> Array[BossPhaseDef]:
 			]
 			spell1_pool = [
 				Callable(self, "_boss5_heal_mode"),
-				Callable(self, "shoot_tracking_burst"),
-				Callable(self, "shoot_triple_spiral"),
+				Callable(self, "_boss5_chain_explosion"),
+				Callable(self, "_boss5_gravity_sink"),
 				Callable(self, "_special_split_bomb")
 			]
 			spell2_pool = [
-				Callable(self, "shoot_dense_tracking"),
-				Callable(self, "shoot_chaos_pattern"),
+				Callable(self, "_boss5_mirror_tnt"),
 				Callable(self, "_special_bounce_chaos"),
-				Callable(self, "_special_ultimate_chaos")
+				Callable(self, "_special_ultimate_chaos"),
+				Callable(self, "_special_homing_hell")
 			]
 		6:
 			nonspell_pool = [
-				Callable(self, "shoot_double_spiral"),
-				Callable(self, "shoot_tracking_burst"),
-				Callable(self, "shoot_triple_spiral"),
+				Callable(self, "_boss6_phase1_fire_rain"),
+				Callable(self, "_boss6_ember_scatter"),
+				Callable(self, "_boss6_blaze_wave"),
 				Callable(self, "_special_butterfly_swarm"),
 				Callable(self, "_special_wave_wall")
 			]
 			spell1_pool = [
-				Callable(self, "shoot_pentagram"),
-				Callable(self, "shoot_chaos_pattern"),
-				Callable(self, "shoot_spiral_pattern").bind(18, 2.6),
+				Callable(self, "_boss6_spell1_spiral_fire"),
+				Callable(self, "_boss6_inferno_spiral"),
+				Callable(self, "_boss6_flame_wheel"),
 				Callable(self, "_special_spiral_madness"),
 				Callable(self, "_special_homing_hell")
 			]
 			spell2_pool = [
-				Callable(self, "shoot_ultimate_pattern"),
-				Callable(self, "shoot_dense_tracking"),
-				Callable(self, "shoot_triple"),
+				Callable(self, "_boss6_fire_serpent"),
+				Callable(self, "_boss6_horizontal_laser"),
+				Callable(self, "_boss6_galaxy_burst"),
 				Callable(self, "_special_laser_cross"),
 				Callable(self, "_special_accelerate_burst"),
 				Callable(self, "_special_ultimate_chaos")
@@ -885,13 +885,13 @@ func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 		Callable(self, "_boss1_plasma_burst")
 	]
 
-	# Nonspell 2: Serpent's Dance - 5 unique skills
+	# Nonspell 2: Desert Summoning - 5 summoning skills
 	var nonspell_2_pool: Array[Callable] = [
-		Callable(self, "_boss1_serpent_coil"),
-		Callable(self, "_boss1_viper_strike"),
-		Callable(self, "_boss1_cobra_dance"),
-		Callable(self, "_boss1_python_crush"),
-		Callable(self, "_boss1_sand_wyrm")
+		Callable(self, "_boss1_sand_guardian_summon"),
+		Callable(self, "_boss1_scarab_swarm"),
+		Callable(self, "_boss1_pharaoh_guard"),
+		Callable(self, "_boss1_obelisk_ritual"),
+		Callable(self, "_boss1_desert_legion")
 	]
 
 	# Spell 2: Gravity Manipulation - 5 unique skills
@@ -914,7 +914,7 @@ func _build_boss1_phases(total_hp: int) -> Array[BossPhaseDef]:
 	return [
 		_make_phase_mix(PhaseKind.NONSPELL, "Sandstorm Prelude", hps[0], 38.0, 0.6, 0.25, 1.0, nonspell_1_pool[0], nonspell_1_pool),
 		_make_phase_mix(PhaseKind.SPELL, "Chain Lightning", hps[1], 55.0, 0.0, 0.18, 1.2, spell_1_pool[0], spell_1_pool),
-		_make_phase_mix(PhaseKind.NONSPELL, "Mirage Snakes", hps[2], 38.0, 0.55, 0.25, 1.0, nonspell_2_pool[0], nonspell_2_pool),
+		_make_phase_mix(PhaseKind.NONSPELL, "Desert Summoning", hps[2], 38.0, 0.55, 0.25, 1.0, nonspell_2_pool[0], nonspell_2_pool),
 		_make_phase_mix(PhaseKind.SPELL, "Singularity Pull", hps[3], 60.0, 0.0, 0.18, 1.2, spell_2_pool[0], spell_2_pool),
 		_make_phase_mix(PhaseKind.FINAL, "Event Horizon", hps[4], 70.0, 0.45, 0.14, 1.0, final_pool[0], final_pool, PatternPoolMode.RANDOM)
 	]
@@ -4913,186 +4913,374 @@ func _boss1_plasma_burst() -> void:
 # NONSPELL 2 - Serpent's Dance (5 skills)
 # =============================================================================
 
-func _boss1_serpent_coil() -> void:
-	# 4 snake-like bullet streams orbit the boss, then dash at the player
-	if not bullet_scene or not get_parent():
-		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player:
-		return
-	for wave in range(4):
-		var base_offset = wave * TAU / 4.0
-		for i in range(20):
-			var angle = base_offset + (TAU / 20.0) * i
-			var spawn_pos = global_position + Vector2(cos(angle), sin(angle)) * 150.0
-			var bullet = bullet_scene.instantiate() as EnemyBullet
-			bullet.global_position = spawn_pos
-			bullet.direction = Vector2.ZERO
-			bullet.speed = 0.0
-			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-			bullet.orbit_center = global_position
-			bullet.orbit_radius = 150.0
-			bullet.orbit_angle = angle
-			bullet.orbit_angular_speed = 3.0
-			bullet.orbit_time_left = 1.5
-			bullet.dash_after_orbit = true
-			bullet.dash_target = player.global_position
-			bullet.dash_speed = 350.0
-			get_parent().add_child(bullet)
-			await get_tree().create_timer(0.03).timeout
-		await get_tree().create_timer(0.12).timeout
+# =============================================================================
+# NONSPELL 2 - Desert Summoning (5 skills)
+# =============================================================================
 
-func _boss1_viper_strike() -> void:
-	# Fast aimed homing snake bursts with ring interludes
+func _boss1_sand_guardian_summon() -> void:
+	# Summon 3 TANK minions in a triangle around the boss. While minions exist,
+	# fire aimed fans at player. Also fire DECELERATE ring that stops and re-aims.
 	if not bullet_scene or not get_parent():
 		return
 	var player = get_tree().get_first_node_in_group("player")
-	if not player:
+	if not player or not is_instance_valid(player):
 		return
-	for strike in range(6):
-		var aim_angle = global_position.direction_to(player.global_position).angle()
-		# Fire 15 homing bullets in a tight spread aimed at player
-		for i in range(15):
-			var spread = aim_angle + (i - 7.0) * 0.09
+	var vp = get_viewport_rect().size
+	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	# --- Summon 3 TANK minions in triangle formation around boss ---
+	for i in range(3):
+		var angle = (TAU / 3.0) * i - PI / 2.0
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.TANK
+		minion.global_position = global_position + Vector2(cos(angle), sin(angle)) * 140.0
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.15).timeout
+	# --- Main attack loop: aimed fans + decelerate rings ---
+	for wave in range(10):
+		if not player or not is_instance_valid(player):
+			break
+		var aim = global_position.direction_to(player.global_position).angle()
+		# Aimed bullet fan at player (9 bullets)
+		for j in range(9):
+			var spread = aim + (j - 4) * 0.18
 			var bullet = bullet_scene.instantiate() as EnemyBullet
 			bullet.global_position = global_position
 			bullet.direction = Vector2(cos(spread), sin(spread))
-			bullet.speed = 280.0
-			bullet.bullet_type = EnemyBullet.BulletType.HOMING
-			bullet._homing_strength = 2.5
-			bullet._homing_duration = 0.5
+			bullet.speed = 300.0
 			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-			get_parent().add_child(bullet)
-		await get_tree().create_timer(0.06).timeout
-		# Quick normal bullet ring between strikes
-		for j in range(16):
-			var ring_angle = (TAU / 16.0) * j + strike * 0.2
-			var bullet = bullet_scene.instantiate() as EnemyBullet
-			bullet.global_position = global_position
-			bullet.direction = Vector2(cos(ring_angle), sin(ring_angle))
-			bullet.speed = 190.0
-			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
-			get_parent().add_child(bullet)
-		await get_tree().create_timer(0.10).timeout
-
-func _boss1_cobra_dance() -> void:
-	# Alternating sine wave streams aimed at player with accelerate pressure bullets
-	if not bullet_scene or not get_parent():
-		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player:
-		return
-	for wave in range(8):
-		var aim_angle = global_position.direction_to(player.global_position).angle()
-		var side = 1.0 if wave % 2 == 0 else -1.0
-		# 20 sine wave bullets per wave, alternating left/right offset
-		for i in range(20):
-			var offset_angle = aim_angle + side * 0.4
-			var bullet = bullet_scene.instantiate() as EnemyBullet
-			bullet.global_position = global_position
-			bullet.direction = Vector2(cos(offset_angle), sin(offset_angle))
-			bullet.speed = 200.0 + i * 4.0
-			bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
-			bullet.wave_amplitude = 45.0
-			bullet.wave_frequency = 3.5
-			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
-			get_parent().add_child(bullet)
-			await get_tree().create_timer(0.02).timeout
-		# Pressure accelerate bullets between waves
-		for j in range(5):
-			var acc_angle = aim_angle + (j - 2.0) * 0.18
-			var bullet = bullet_scene.instantiate() as EnemyBullet
-			bullet.global_position = global_position
-			bullet.direction = Vector2(cos(acc_angle), sin(acc_angle))
-			bullet.speed = 120.0
-			bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
-			bullet.acceleration = 180.0
-			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			get_parent().add_child(bullet)
 		await get_tree().create_timer(0.08).timeout
-
-func _boss1_python_crush() -> void:
-	# Thick bullet snakes from all 4 screen corners aimed at player, split on arrival
-	if not bullet_scene or not get_parent():
-		return
-	var player = get_tree().get_first_node_in_group("player")
-	if not player:
-		return
-	var corners = [
-		Vector2(50, 50),
-		Vector2(850, 50),
-		Vector2(50, 550),
-		Vector2(850, 550)
-	]
-	for round_idx in range(4):
-		# Rotate which corners fire each round for variety
-		var corner_start = round_idx % 4
-		for c in range(4):
-			var corner = corners[(corner_start + c) % 4]
-			var aim_dir = (player.global_position - corner).normalized()
-			# 15 split bullets in a tight line from each corner
-			for i in range(15):
+		# DECELERATE ring that stops and re-aims at player
+		if wave % 2 == 0:
+			for k in range(16):
+				var ring_angle = (TAU / 16.0) * k + wave * 0.3
 				var bullet = bullet_scene.instantiate() as EnemyBullet
-				bullet.global_position = corner + aim_dir * (i * 8.0)
-				bullet.direction = aim_dir.rotated((randf() - 0.5) * 0.12)
-				bullet.speed = 230.0 + i * 3.0
-				bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(ring_angle), sin(ring_angle))
+				bullet.speed = 280.0
+				bullet.bullet_type = EnemyBullet.BulletType.DECELERATE
+				bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.10).timeout
+		# Secondary aimed burst between waves for pressure
+		if player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for m in range(5):
+				var spread2 = aim2 + (m - 2) * 0.25
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(spread2), sin(spread2))
+				bullet.speed = 340.0
 				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 				get_parent().add_child(bullet)
-			await get_tree().create_timer(0.03).timeout
-		await get_tree().create_timer(0.10).timeout
+		await get_tree().create_timer(0.02).timeout
 
-func _boss1_sand_wyrm() -> void:
-	# Giant laser sweep from boss with trailing sand bullets and edge homing
+
+func _boss1_scarab_swarm() -> void:
+	# Summon 4 FAST minions from screen edges (top, bottom, left, right).
+	# Boss fires HOMING bullets at player. Between waves, fire SPLIT bullets.
 	if not bullet_scene or not get_parent():
 		return
 	var player = get_tree().get_first_node_in_group("player")
-	if not player:
+	if not player or not is_instance_valid(player):
 		return
-	var base_angle = global_position.direction_to(player.global_position).angle() - 0.8
-	# Laser sweep: rotate across 1.6 radians in 30 steps
-	for step in range(30):
-		var sweep_angle = base_angle + (step / 30.0) * 1.6
-		# 5 laser bullets in a tight cluster for thick beam effect
-		for l in range(5):
-			var laser_offset = sweep_angle + (l - 2.0) * 0.03
+	var vp = get_viewport_rect().size
+	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	# --- Summon 4 FAST minions from each screen edge ---
+	var edge_positions = [
+		Vector2(vp.x * 0.5, 30),          # top center
+		Vector2(vp.x * 0.5, vp.y - 30),   # bottom center
+		Vector2(30, vp.y * 0.4),           # left
+		Vector2(vp.x - 30, vp.y * 0.4)    # right
+	]
+	for idx in range(4):
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.FAST
+		minion.global_position = edge_positions[idx]
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.12).timeout
+	# --- Main attack loop: HOMING bullets + SPLIT bursts ---
+	for wave in range(8):
+		if not player or not is_instance_valid(player):
+			break
+		# HOMING bullets aimed at player from boss (6 per wave)
+		var aim = global_position.direction_to(player.global_position).angle()
+		for j in range(6):
+			var spread = aim + (j - 2.5) * 0.22
 			var bullet = bullet_scene.instantiate() as EnemyBullet
 			bullet.global_position = global_position
-			bullet.direction = Vector2(cos(laser_offset), sin(laser_offset))
-			bullet.speed = 400.0
-			bullet.bullet_type = EnemyBullet.BulletType.LASER
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 240.0
+			bullet.bullet_type = EnemyBullet.BulletType.HOMING
+			bullet._homing_strength = 2.8
+			bullet._homing_duration = 0.7
 			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			get_parent().add_child(bullet)
-		# Sand trail bullets behind the sweep
-		for t in range(3):
-			var trail_angle = sweep_angle - 0.15 + t * 0.15
+		await get_tree().create_timer(0.10).timeout
+		# SPLIT bullets aimed at player between waves
+		if wave % 2 == 0 and player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for k in range(8):
+				var spread2 = aim2 + (k - 3.5) * 0.15
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(spread2), sin(spread2))
+				bullet.speed = 310.0
+				bullet.bullet_type = EnemyBullet.BulletType.SPLIT
+				bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.08).timeout
+		# Extra aimed burst for sustained pressure
+		if player and is_instance_valid(player):
+			var aim3 = global_position.direction_to(player.global_position).angle()
+			for n in range(4):
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position + Vector2(cos(aim3 + PI / 2), sin(aim3 + PI / 2)) * (n - 1.5) * 25.0
+				bullet.direction = Vector2(cos(aim3), sin(aim3))
+				bullet.speed = 350.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.06).timeout
+
+
+func _boss1_pharaoh_guard() -> void:
+	# Summon 2 SNIPER minions flanking the boss. Boss fires alternating SINE_WAVE
+	# streams aimed at player. Minions provide crossfire pressure.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	# --- Summon 2 SNIPER minions flanking the boss ---
+	var flank_offset = 180.0
+	for side in range(2):
+		var x_off = -flank_offset if side == 0 else flank_offset
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.SNIPER
+		minion.global_position = Vector2(global_position.x + x_off, global_position.y + 40.0)
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.12).timeout
+	# --- Main attack loop: alternating SINE_WAVE streams at player ---
+	var stream_offset = 0.0
+	for wave in range(12):
+		if not player or not is_instance_valid(player):
+			break
+		var aim = global_position.direction_to(player.global_position).angle()
+		# Alternating sine wave streams (left-leaning and right-leaning)
+		var sine_sign = 1.0 if wave % 2 == 0 else -1.0
+		for j in range(5):
+			var spread = aim + (j - 2) * 0.14 + stream_offset
 			var bullet = bullet_scene.instantiate() as EnemyBullet
 			bullet.global_position = global_position
-			bullet.direction = Vector2(cos(trail_angle), sin(trail_angle))
-			bullet.speed = 160.0
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 270.0 + j * 15.0
+			bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+			bullet.set_sprite("res://assets/sprites/bossbullut-8.png")
+			get_parent().add_child(bullet)
+		stream_offset += 0.08 * sine_sign
+		await get_tree().create_timer(0.07).timeout
+		# Every 3rd wave, fire a tight aimed burst for extra pressure
+		if wave % 3 == 0 and player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for k in range(7):
+				var spread2 = aim2 + (k - 3) * 0.12
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(spread2), sin(spread2))
+				bullet.speed = 320.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+				get_parent().add_child(bullet)
+		# Every 4th wave, fire sine wave streams from flank positions
+		if wave % 4 == 0 and player and is_instance_valid(player):
+			for side in range(2):
+				var flank_pos = Vector2(global_position.x + (-flank_offset if side == 0 else flank_offset), global_position.y + 40.0)
+				var flank_aim = flank_pos.direction_to(player.global_position).angle()
+				for f in range(4):
+					var bullet = bullet_scene.instantiate() as EnemyBullet
+					bullet.global_position = flank_pos
+					bullet.direction = Vector2(cos(flank_aim + (f - 1.5) * 0.2), sin(flank_aim + (f - 1.5) * 0.2))
+					bullet.speed = 290.0
+					bullet.bullet_type = EnemyBullet.BulletType.SINE_WAVE
+					bullet.set_sprite("res://assets/sprites/bossbullut-8.png")
+					get_parent().add_child(bullet)
+		await get_tree().create_timer(0.06).timeout
+
+
+func _boss1_obelisk_ritual() -> void:
+	# Summon 4 SUICIDE minions at screen corners. Boss fires ACCELERATE aimed fans.
+	# Between summon waves, fire orbit bullets that dash at player after orbiting.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	# --- Summon 4 SUICIDE minions at screen corners ---
+	var corner_positions = [
+		Vector2(60, 60),
+		Vector2(vp.x - 60, 60),
+		Vector2(60, vp.y - 60),
+		Vector2(vp.x - 60, vp.y - 60)
+	]
+	for idx in range(4):
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.SUICIDE
+		minion.global_position = corner_positions[idx]
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.12).timeout
+	# --- Main attack loop: ACCELERATE fans + orbit-dash bullets ---
+	for wave in range(8):
+		if not player or not is_instance_valid(player):
+			break
+		# ACCELERATE bullet fan aimed at player (10 bullets)
+		var aim = global_position.direction_to(player.global_position).angle()
+		for j in range(10):
+			var spread = aim + (j - 4.5) * 0.16
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 200.0
+			bullet.bullet_type = EnemyBullet.BulletType.ACCELERATE
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
+			get_parent().add_child(bullet)
+		await get_tree().create_timer(0.10).timeout
+		# Orbit bullets that circle boss then dash at player
+		if wave % 2 == 0 and player and is_instance_valid(player):
+			var orbit_count = 10
+			for k in range(orbit_count):
+				var orb_angle = (TAU / orbit_count) * k
+				var radius = 120.0
+				var spawn_pos = global_position + Vector2(cos(orb_angle), sin(orb_angle)) * radius
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = spawn_pos
+				bullet.direction = Vector2(cos(orb_angle + PI / 2), sin(orb_angle + PI / 2))
+				bullet.speed = 0.0
+				bullet.orbit_center = global_position
+				bullet.orbit_radius = radius
+				bullet.orbit_angle = orb_angle
+				bullet.orbit_angular_speed = 4.0 * (1 if wave % 4 == 0 else -1)
+				bullet.orbit_time_left = 0.6
+				bullet.dash_after_orbit = true
+				bullet.dash_target = player.global_position
+				bullet.dash_speed = 340.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-10.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.08).timeout
+		# Extra aimed narrow burst for sustained threat
+		if player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for n in range(3):
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(aim2 + (n - 1) * 0.08), sin(aim2 + (n - 1) * 0.08))
+				bullet.speed = 380.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.06).timeout
+
+
+func _boss1_desert_legion() -> void:
+	# Multi-wave summoning: Wave 1: 2 FAST + aimed fan. Wave 2: 2 TANK + LASER sweep.
+	# Wave 3: 2 SNIPER + HOMING burst. Each wave summons at random edge positions.
+	if not bullet_scene or not get_parent():
+		return
+	var player = get_tree().get_first_node_in_group("player")
+	if not player or not is_instance_valid(player):
+		return
+	var vp = get_viewport_rect().size
+	var enemy_scene_ref: PackedScene = load("res://scenes/enemies/enemy.tscn") as PackedScene
+	# ===== WAVE 1: 2 FAST minions + aimed bullet fan =====
+	for i in range(2):
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.FAST
+		var edge_x = randf_range(80, vp.x - 80)
+		var edge_y = 30.0 if i == 0 else vp.y - 30.0
+		minion.global_position = Vector2(edge_x, edge_y)
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.10).timeout
+	# Wave 1 bullets: aimed fan at player (4 rounds)
+	for round_idx in range(4):
+		if not player or not is_instance_valid(player):
+			break
+		var aim = global_position.direction_to(player.global_position).angle()
+		for j in range(11):
+			var spread = aim + (j - 5) * 0.15
+			var bullet = bullet_scene.instantiate() as EnemyBullet
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 290.0 + round_idx * 15.0
 			bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
 			get_parent().add_child(bullet)
-		await get_tree().create_timer(0.04).timeout
-	# Homing bullets from screen edges
-	var edge_positions = [
-		Vector2(0, 200), Vector2(0, 400),
-		Vector2(900, 200), Vector2(900, 400),
-		Vector2(300, 0), Vector2(600, 0)
-	]
-	for edge_pos in edge_positions:
-		var aim_dir = (player.global_position - edge_pos).normalized()
-		for h in range(3):
+		await get_tree().create_timer(0.08).timeout
+	# ===== WAVE 2: 2 TANK minions + LASER sweep at player =====
+	for i in range(2):
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.TANK
+		var edge_y2 = randf_range(100, vp.y - 100)
+		var edge_x2 = 30.0 if i == 0 else vp.x - 30.0
+		minion.global_position = Vector2(edge_x2, edge_y2)
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.10).timeout
+	# Wave 2 bullets: LASER sweep aimed at player (sweeping arc)
+	if player and is_instance_valid(player):
+		var base_aim = global_position.direction_to(player.global_position).angle()
+		var sweep_start = base_aim - 0.6
+		for s in range(16):
+			var sweep_angle = sweep_start + s * 0.075
+			var laser = bullet_scene.instantiate() as EnemyBullet
+			laser.global_position = global_position
+			laser.direction = Vector2(cos(sweep_angle), sin(sweep_angle))
+			laser.speed = 520.0
+			laser.bullet_type = EnemyBullet.BulletType.LASER
+			laser.set_sprite("res://assets/sprites/bossbullut-11.png")
+			get_parent().add_child(laser)
+			# Parallel normal bullets alongside laser
+			var side_bullet = bullet_scene.instantiate() as EnemyBullet
+			side_bullet.global_position = global_position
+			side_bullet.direction = Vector2(cos(sweep_angle + 0.15), sin(sweep_angle + 0.15))
+			side_bullet.speed = 310.0
+			side_bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			get_parent().add_child(side_bullet)
+			await get_tree().create_timer(0.04).timeout
+	# ===== WAVE 3: 2 SNIPER minions + HOMING burst =====
+	for i in range(2):
+		var minion: Enemy = enemy_scene_ref.instantiate() as Enemy
+		minion.enemy_kind = EnemyKind.SNIPER
+		var edge_x3 = randf_range(100, vp.x - 100)
+		var edge_y3 = 30.0 if i == 0 else vp.y - 30.0
+		minion.global_position = Vector2(edge_x3, edge_y3)
+		get_parent().add_child(minion)
+	await get_tree().create_timer(0.10).timeout
+	# Wave 3 bullets: HOMING burst aimed at player (5 rounds)
+	for round_idx in range(5):
+		if not player or not is_instance_valid(player):
+			break
+		var aim = global_position.direction_to(player.global_position).angle()
+		for j in range(8):
+			var spread = aim + (j - 3.5) * 0.2
 			var bullet = bullet_scene.instantiate() as EnemyBullet
-			bullet.global_position = edge_pos
-			bullet.direction = aim_dir.rotated((h - 1.0) * 0.15)
-			bullet.speed = 220.0
+			bullet.global_position = global_position
+			bullet.direction = Vector2(cos(spread), sin(spread))
+			bullet.speed = 230.0
 			bullet.bullet_type = EnemyBullet.BulletType.HOMING
-			bullet._homing_strength = 2.0
-			bullet._homing_duration = 0.6
-			bullet.set_sprite("res://assets/sprites/bossbullut-5.png")
+			bullet._homing_strength = 3.0
+			bullet._homing_duration = 0.8
+			bullet.set_sprite("res://assets/sprites/bossbullut-6.png")
 			get_parent().add_child(bullet)
-		await get_tree().create_timer(0.04).timeout
-
+		# Supplementary aimed normal bullets
+		if player and is_instance_valid(player):
+			var aim2 = global_position.direction_to(player.global_position).angle()
+			for k in range(5):
+				var bullet = bullet_scene.instantiate() as EnemyBullet
+				bullet.global_position = global_position
+				bullet.direction = Vector2(cos(aim2 + (k - 2) * 0.1), sin(aim2 + (k - 2) * 0.1))
+				bullet.speed = 350.0
+				bullet.set_sprite("res://assets/sprites/bossbullut-3.png")
+				get_parent().add_child(bullet)
+		await get_tree().create_timer(0.07).timeout
 # =============================================================================
 # SPELL 2 - Gravity Manipulation (5 skills)
 # =============================================================================
