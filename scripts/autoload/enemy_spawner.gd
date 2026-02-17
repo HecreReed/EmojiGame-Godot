@@ -35,6 +35,10 @@ func _make_stage_action(t: float, action: Callable) -> StageAction:
 func _ready() -> void:
 	randomize()
 
+	# StageManager should only advance while gameplay is active (not on the title menu).
+	if StageManager and StageManager.has_method("ensure_gameplay_active"):
+		StageManager.ensure_gameplay_active()
+
 	if not enemy_scene:
 		enemy_scene = load("res://scenes/enemies/enemy.tscn")
 	if not boss_scene:

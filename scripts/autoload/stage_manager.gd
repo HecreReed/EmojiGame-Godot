@@ -7,6 +7,17 @@ signal midboss_changed(active: bool)
 signal game_cleared
 
 enum StagePhase { STAGE, BOSS, CLEAR, GAME_CLEAR }
+enum Route { BASE, EXTRA }
+
+# Touhou-like "campaign" selection at game start.
+# Currently only 黄豆风神录 Base is available; Extra and future campaigns are reserved.
+const CAMPAIGNS: Array[Dictionary] = [
+	{"id": &"fushinroku", "title": "黄豆风神录", "base_open": true, "extra_open": false},
+	{"id": &"koumakan", "title": "黄豆红魔乡", "base_open": false, "extra_open": false, "reserved": true},
+	{"id": &"youyoumu", "title": "黄豆妖妖梦", "base_open": false, "extra_open": false, "reserved": true},
+	{"id": &"eiyashou", "title": "黄豆永夜抄", "base_open": false, "extra_open": false, "reserved": true},
+	{"id": &"chireiden", "title": "黄豆地灵殿", "base_open": false, "extra_open": false, "reserved": true},
+]
 
 @export var total_stages: int = 6
 @export var stage_duration: float = 60.0
@@ -14,6 +25,11 @@ enum StagePhase { STAGE, BOSS, CLEAR, GAME_CLEAR }
 
 var current_stage: int = 1
 var current_phase: StagePhase = StagePhase.STAGE
+var current_campaign_id: StringName = &"fushinroku"
+var current_route: Route = Route.BASE
+
+# Stage timer only runs during gameplay scenes (prevents StageManager advancing on the title menu).
+var gameplay_active: bool = false
 
 var stage_elapsed: float = 0.0
 var clear_elapsed: float = 0.0
@@ -21,10 +37,14 @@ var midboss_active: bool = false
 
 
 func _ready() -> void:
-	reset()
+	gameplay_active = false
+	reset(false)
 
 
 func _process(delta: float) -> void:
+	if not gameplay_active:
+		return
+
 	# Python version freezes stage progression during time stop.
 	if GameManager.time_stop_active:
 		return
@@ -47,7 +67,7 @@ func _process(delta: float) -> void:
 			pass
 
 
-func reset() -> void:
+func reset(play_bgm: bool = true) -> void:
 	current_stage = 1
 	current_phase = StagePhase.STAGE
 	stage_elapsed = 0.0
@@ -56,8 +76,62 @@ func reset() -> void:
 	stage_changed.emit(current_stage)
 	phase_changed.emit(current_phase)
 	midboss_changed.emit(midboss_active)
-	if AudioManager:
+	if play_bgm and AudioManager:
 		AudioManager.play_bgm_file("bgm%d.mp3" % current_stage)
+
+func stop_gameplay() -> void:
+	gameplay_active = false
+
+func start_gameplay() -> void:
+	gameplay_active = true
+	reset(true)
+
+func ensure_gameplay_active() -> void:
+	if gameplay_active:
+		return
+	start_gameplay()
+
+func begin_run(campaign_id: StringName, route: int) -> void:
+	current_campaign_id = campaign_id
+	current_route = Route.EXTRA if int(route) == Route.EXTRA else Route.BASE
+	start_gameplay()
+
+func is_gameplay_running() -> bool:
+	return gameplay_active
+
+func get_campaign_defs() -> Array[Dictionary]:
+	return CAMPAIGNS.duplicate(true)
+
+func get_campaign_def(campaign_id: StringName) -> Dictionary:
+	for c in CAMPAIGNS:
+		if c.get("id", &"") == campaign_id:
+			return c
+	return {}
+
+func get_campaign_title(campaign_id: StringName = current_campaign_id) -> String:
+	var d := get_campaign_def(campaign_id)
+	return str(d.get("title", ""))
+
+func is_route_available(campaign_id: StringName, route: int) -> bool:
+	var d := get_campaign_def(campaign_id)
+	if d.is_empty():
+		return false
+	match int(route):
+		Route.BASE:
+			return bool(d.get("base_open", false))
+		Route.EXTRA:
+			return bool(d.get("extra_open", false))
+		_:
+			return false
+
+func get_route_label(route: int = int(current_route)) -> String:
+	match int(route):
+		Route.BASE:
+			return "Base"
+		Route.EXTRA:
+			return "Extra"
+		_:
+			return "?"
 
 
 func set_midboss_active(active: bool) -> void:
@@ -166,4 +240,8 @@ func get_stage_info() -> String:
 	var label: String = str(phase_text.get(current_phase, ""))
 	if current_phase == StagePhase.STAGE and midboss_active:
 		label = "中Boss"
-	return "Stage %d/%d - %s" % [current_stage, total_stages, label]
+	var prefix := ""
+	var campaign_title := get_campaign_title()
+	if campaign_title != "":
+		prefix = "%s %s | " % [campaign_title, get_route_label()]
+	return "%sStage %d/%d - %s" % [prefix, current_stage, total_stages, label]

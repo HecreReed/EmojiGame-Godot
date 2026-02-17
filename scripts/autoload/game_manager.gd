@@ -109,6 +109,10 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("pause"):
+		# Don't allow pausing on non-gameplay scenes (e.g. title menu).
+		if StageManager and StageManager.has_method("is_gameplay_running"):
+			if not StageManager.is_gameplay_running():
+				return
 		if is_paused:
 			resume_game()
 		else:
@@ -321,7 +325,10 @@ func save_high_score():
 func restart_game():
 	reset_run_state()
 	if StageManager:
-		StageManager.reset()
+		if StageManager.has_method("start_gameplay"):
+			StageManager.start_gameplay()
+		else:
+			StageManager.reset()
 	get_tree().paused = false
 	is_paused = false
 	get_tree().reload_current_scene()
